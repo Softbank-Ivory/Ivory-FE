@@ -1,10 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Play, MoreVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DeployModal } from '@/components/features/functions/DeployModal';
+import { functionService } from '@/services/functionService';
+import type { FunctionDef } from '@/types/api';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function FunctionsPage() {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [functions, setFunctions] = useState<FunctionDef[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFunctions = async () => {
+      try {
+        const data = await functionService.getFunctions();
+        setFunctions(data);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadFunctions();
+  }, []);
+
+  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className="p-8 space-y-6">
@@ -40,42 +59,12 @@ export function FunctionsPage() {
               <th className="px-8 py-5 font-bold">Name</th>
               <th className="px-8 py-5 font-bold">Runtime</th>
               <th className="px-8 py-5 font-bold">Last Executed</th>
-              <th className="px-8 py-5 font-bold">Success Rate</th>
               <th className="px-8 py-5 font-bold">Status</th>
               <th className="px-8 py-5 font-bold text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {[
-              {
-                name: 'process-order',
-                runtime: 'Node.js 18',
-                last: '2 mins ago',
-                rate: '99.2%',
-                status: 'Active',
-              },
-              {
-                name: 'generate-thumbnail',
-                runtime: 'Python 3.9',
-                last: '1 hour ago',
-                rate: '95.0%',
-                status: 'Active',
-              },
-              {
-                name: 'send-email',
-                runtime: 'Node.js 18',
-                last: '5 mins ago',
-                rate: '98.1%',
-                status: 'Active',
-              },
-              {
-                name: 'backup-db',
-                runtime: 'Go 1.20',
-                last: '1 day ago',
-                rate: '100%',
-                status: 'Inactive',
-              },
-            ].map((fn) => (
+            {functions.map((fn) => (
               <tr key={fn.name} className="hover:bg-muted/30 transition-colors group">
                 <td className="px-8 py-5 font-bold text-foreground">
                   <Link
@@ -86,12 +75,11 @@ export function FunctionsPage() {
                   </Link>
                 </td>
                 <td className="px-8 py-5 text-muted-foreground font-medium">{fn.runtime}</td>
-                <td className="px-8 py-5 text-muted-foreground font-medium">{fn.last}</td>
-                <td className="px-8 py-5 text-muted-foreground font-medium">{fn.rate}</td>
+                <td className="px-8 py-5 text-muted-foreground font-medium">{fn.lastExecutedAt}</td>
                 <td className="px-8 py-5">
                   <span
                     className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
-                      fn.status === 'Active'
+                      fn.status === 'ACTIVE'
                         ? 'bg-green-100 text-green-700'
                         : 'bg-slate-100 text-slate-500'
                     }`}

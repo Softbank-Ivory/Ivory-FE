@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Play, Settings, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
@@ -9,50 +10,26 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { ParcelCard, type ExecutionStatus } from '../components/features/dashboard/ParcelCard';
-
-const data = [
-  { name: '10:00', latency: 240 },
-  { name: '10:05', latency: 300 },
-  { name: '10:10', latency: 200 },
-  { name: '10:15', latency: 278 },
-  { name: '10:20', latency: 189 },
-  { name: '10:25', latency: 239 },
-  { name: '10:30', latency: 349 },
-];
-
-const recentExecutions = [
-  {
-    id: 'exec-123',
-    functionName: 'process-order',
-    status: 'RUNNING' as ExecutionStatus,
-    startTime: '10:42:05 AM',
-  },
-  {
-    id: 'exec-120',
-    functionName: 'process-order',
-    status: 'COMPLETED' as ExecutionStatus,
-    startTime: '10:39:20 AM',
-    duration: '850ms',
-  },
-  {
-    id: 'exec-118',
-    functionName: 'process-order',
-    status: 'COMPLETED' as ExecutionStatus,
-    startTime: '10:35:10 AM',
-    duration: '920ms',
-  },
-  {
-    id: 'exec-115',
-    functionName: 'process-order',
-    status: 'FAILED' as ExecutionStatus,
-    startTime: '10:30:00 AM',
-    duration: '5.2s',
-  },
-];
+import { ParcelCard } from '../components/features/dashboard/ParcelCard';
+import { functionService } from '@/services/functionService';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function FunctionDetailPage() {
   const { functionId } = useParams();
+  const [details, setDetails] = useState<any>(null);
+
+  useEffect(() => {
+    const loadDetails = async () => {
+      if (functionId) {
+        const data = await functionService.getFunctionDetails(functionId);
+        setDetails(data);
+      }
+    };
+    loadDetails();
+  }, [functionId]);
+
+  if (!details) return <LoadingScreen />;
+
 
   return (
     <div className="p-8 space-y-8">
@@ -100,7 +77,7 @@ export function FunctionDetailPage() {
               Avg. Latency
             </h3>
           </div>
-          <p className="text-4xl font-black text-foreground">245ms</p>
+          <p className="text-4xl font-black text-foreground">{details.stats.latency}ms</p>
           <p className="text-xs text-green-600 font-bold mt-1">↓ 12% from last hour</p>
         </div>
         <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
@@ -112,7 +89,7 @@ export function FunctionDetailPage() {
               Success Rate
             </h3>
           </div>
-          <p className="text-4xl font-black text-foreground">99.2%</p>
+          <p className="text-4xl font-black text-foreground">{details.stats.successRate}%</p>
           <p className="text-xs text-muted-foreground font-bold mt-1">Last 24 hours</p>
         </div>
         <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
@@ -124,7 +101,7 @@ export function FunctionDetailPage() {
               Errors
             </h3>
           </div>
-          <p className="text-4xl font-black text-foreground">8</p>
+          <p className="text-4xl font-black text-foreground">{details.stats.errors}</p>
           <p className="text-xs text-muted-foreground font-bold mt-1">Last 24 hours</p>
         </div>
       </div>
@@ -134,7 +111,7 @@ export function FunctionDetailPage() {
         <h3 className="text-xl font-bold text-foreground mb-6">Latency History</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
+            <AreaChart data={details.latencyHistory}>
               <defs>
                 <linearGradient id="colorLatency" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#FF9E80" stopOpacity={0.3} />
@@ -177,7 +154,7 @@ export function FunctionDetailPage() {
       <div>
         <h3 className="text-xl font-bold text-foreground mb-4">Recent Executions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {recentExecutions.map((exec) => (
+          {details.recentExecutions.map((exec: any) => (
             <ParcelCard key={exec.id} {...exec} />
           ))}
         </div>
