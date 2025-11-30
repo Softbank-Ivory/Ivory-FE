@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Package, Truck, Box, Server, CheckCircle } from 'lucide-react';
-import {
-  DeliveryTimeline,
-  type StepStatus,
-} from '../components/features/execution/DeliveryTimeline';
 import { LiveLogs } from '../components/features/execution/LiveLogs';
 import { useSimulationStore } from '@/store/simulationStore';
+import { DeliveryStageVisualizer } from '@/components/features/execution/DeliveryStageVisualizer';
+import { CompactTimeline } from '@/components/features/execution/CompactTimeline';
+import type { StepStatus } from '@/components/features/execution/DeliveryTimeline';
 
 const steps = [
   {
@@ -56,29 +55,35 @@ export function ExecutionDetailPage() {
   useEffect(() => {
     if (!isSimulation) return;
 
-    // Start the sequence if coming from deploy
-    if (state === 'PREPARING_SANDBOX') {
+    // Start the sequence if coming from deploy (UPLOADING)
+    if (state === 'UPLOADING') {
       const runSequence = async () => {
-        // Step 1: Request Received (Already done conceptually, but let's visualize)
+        // Step 1: Pickup (Uploading)
+        addLog('Uploading function package...', 'INFO');
+        await new Promise(r => setTimeout(r, 2000));
         
-        // Step 2: Code Fetching
-        await new Promise(r => setTimeout(r, 1000));
-        addLog('Fetching function code from S3 bucket...', 'INFO');
+        // Step 2: Sorting (Assigning Runner)
+        setState('ASSIGNING_RUNNER');
+        addLog('Upload complete. Requesting runner...', 'INFO');
+        await new Promise(r => setTimeout(r, 2000));
+        addLog('Runner i-0123456789 assigned.', 'INFO');
         
-        // Step 3: Sandbox Prep (Current)
-        await new Promise(r => setTimeout(r, 1500));
+        // Step 3: Warehouse (Sandbox Prep)
+        setState('PREPARING_SANDBOX');
+        addLog('Initializing sandbox environment...', 'INFO');
+        await new Promise(r => setTimeout(r, 3000));
         addLog('Sandbox environment ready.', 'INFO');
+        
+        // Step 4: Transit (Execution)
         setState('EXECUTING');
-        
-        // Step 4: Execution
         addLog('Starting function execution...', 'INFO');
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1500));
         addLog('Processing payload...', 'INFO');
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 2500));
         addLog('Function completed successfully.', 'INFO');
-        setState('DELIVERED');
         
-        // Step 5: Delivery
+        // Step 5: Delivered
+        setState('DELIVERED');
         addLog('Sending response to client...', 'INFO');
       };
       
@@ -98,6 +103,10 @@ export function ExecutionDetailPage() {
       if (step.id === '4') status = 'RUNNING';
     } else if (state === 'DELIVERED') {
       status = 'COMPLETED';
+    } else if (state === 'IDLE' || state === 'UPLOADING' || state === 'ASSIGNING_RUNNER') {
+        if (state === 'ASSIGNING_RUNNER' && step.id === '2') status = 'RUNNING';
+        if (state === 'ASSIGNING_RUNNER' && step.id === '1') status = 'COMPLETED';
+        if (state === 'UPLOADING' && step.id === '1') status = 'RUNNING';
     }
 
     return { ...step, status };
@@ -106,47 +115,47 @@ export function ExecutionDetailPage() {
   return (
     <div className="flex h-full flex-col bg-background">
       {/* Header */}
-      <div className="px-8 py-6 border-b border-border bg-card shadow-sm z-10">
-        <div className="flex items-center gap-4 mb-2">
+      <div className="px-8 py-4 border-b border-border bg-card shadow-sm z-10 flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <Link
             to="/"
-            className="p-3 hover:bg-muted rounded-2xl text-muted-foreground hover:text-foreground transition-colors"
+            className="p-2 hover:bg-muted rounded-2xl text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft size={24} />
           </Link>
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground flex items-center gap-3">
+            <h1 className="text-xl font-extrabold text-foreground flex items-center gap-3">
               Execution #{executionId}
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-primary text-primary-foreground shadow-sm">
                 {state}
               </span>
             </h1>
-            <p className="text-muted-foreground text-sm font-medium">
-              process-order • Started at {new Date().toLocaleTimeString()}
-            </p>
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: Timeline */}
-        <div className="w-1/3 min-w-[450px] border-r border-border bg-muted/30 overflow-auto p-10">
-          <h2 className="text-xl font-bold text-foreground mb-10">Delivery Journey</h2>
-          <DeliveryTimeline steps={currentSteps} />
+        {/* Left: Visual Stage (Animation + Timeline) */}
+        <div className="w-1/2 flex flex-col border-r border-border relative bg-muted/30 p-6 gap-6">
+          {/* Visualizer Card */}
+          <div className="flex-1 bg-card rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col">
+            <DeliveryStageVisualizer />
+            <CompactTimeline steps={currentSteps} />
+          </div>
         </div>
 
         {/* Right: Logs & Metadata */}
-        <div className="flex-1 flex flex-col bg-background p-8 gap-8 overflow-hidden">
+        <div className="w-1/2 flex flex-col bg-background p-6 gap-6 overflow-hidden">
           <div className="flex-1 min-h-0 shadow-lg rounded-3xl">
             <LiveLogs />
           </div>
-
+          
           {/* Metadata Panel */}
-          <div className="h-1/3 min-h-[250px] bg-card rounded-3xl border border-border p-8 overflow-auto shadow-sm">
-            <h3 className="text-sm font-bold text-muted-foreground mb-6 uppercase tracking-wider">
+          <div className="h-1/3 min-h-[200px] bg-card rounded-3xl border border-border p-6 overflow-auto shadow-sm">
+            <h3 className="text-sm font-bold text-muted-foreground mb-4 uppercase tracking-wider">
               Request Metadata
             </h3>
-            <div className="grid grid-cols-2 gap-10">
+            <div className="grid grid-cols-2 gap-8">
               <div>
                 <h4 className="text-xs font-bold text-muted-foreground mb-2 uppercase">Payload</h4>
                 <pre className="bg-muted p-5 rounded-2xl text-xs font-mono text-foreground overflow-auto border border-border">

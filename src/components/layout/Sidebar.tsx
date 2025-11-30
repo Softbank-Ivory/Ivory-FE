@@ -1,4 +1,4 @@
-import { LayoutDashboard, Box, Activity, Settings } from 'lucide-react';
+import { LayoutDashboard, Box, Activity } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 
