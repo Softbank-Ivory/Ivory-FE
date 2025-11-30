@@ -1,13 +1,31 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Nunito', sans-serif;
+
+  --color-primary: #ff9e80;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #ffd54f;
+  --color-secondary-foreground: #4e342e;
+
+  --color-background: #fffbf0;
+  --color-foreground: #4e342e;
+
+  --color-muted: #f5e6d3;
+  --color-muted-foreground: #8d6e63;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #4e342e;
+
+  --color-border: #ffccbc;
+  --color-input: #ffe0b2;
+
+  --radius: 1rem;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+:root {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }
