@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, Box, CheckCircle, FileCode } from 'lucide-react';
+import { Package, Truck, Box, CheckCircle, FileCode, XCircle } from 'lucide-react';
 import { useSimulationStore } from '@/store/simulationStore';
 import { LottieScene } from '@/components/ui/LottieScene';
 import { ANIMATION_URLS } from '@/config/animations';
@@ -103,7 +103,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 5: Delivered (Response) */}
-        {(state === 'DELIVERED' || state === 'FAILED') && (
+        {state === 'DELIVERED' && (
           <motion.div
             key="delivered"
             initial={{ opacity: 0, scale: 0.5 }}
@@ -121,6 +121,28 @@ export function DeliveryStageVisualizer() {
             </div>
             <h2 className="text-3xl font-extrabold text-green-700 mt-4">Delivered!</h2>
             <p className="text-muted-foreground font-medium">Response sent successfully.</p>
+          </motion.div>
+        )}
+
+        {/* Stage 6: Failed */}
+        {state === 'FAILED' && (
+          <motion.div
+            key="failed"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center w-full max-w-md"
+          >
+            <div className="w-64 h-64 relative">
+              <div className="absolute inset-0 bg-red-100/50 rounded-full blur-3xl" />
+              <LottieScene 
+                src={ANIMATION_URLS.FAILURE_URL} 
+                className="w-full h-full relative z-10" 
+                loop={false} 
+                fallbackIcon={XCircle}
+              />
+            </div>
+            <h2 className="text-3xl font-extrabold text-red-700 mt-4">Delivery Failed</h2>
+            <p className="text-muted-foreground font-medium">Something went wrong.</p>
           </motion.div>
         )}
       </AnimatePresence>

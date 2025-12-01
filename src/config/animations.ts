@@ -25,4 +25,5 @@ export const ANIMATION_URLS = {
   WAREHOUSE_URL: '/animations/Warehouse.json', 
   TRANSIT_URL: '/animations/DeliveryTruck.json', 
   DELIVERED_URL: '/animations/Success.json', 
+  FAILURE_URL: '/animations/Failure.json',
 };

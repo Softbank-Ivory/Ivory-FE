@@ -4,7 +4,7 @@ import type { StepStatus } from '@/components/features/execution/DeliveryTimelin
 import { executionService } from '@/services/executionService';
 
 export function useExecutionSimulation(isSimulation: boolean) {
-  const { state, setState, addLog } = useSimulationStore();
+  const { state, setState, addLog, setCurrentStepId, currentStepId } = useSimulationStore();
   const steps = executionService.getExecutionSteps();
 
   // Simulation Effect
@@ -15,23 +15,27 @@ export function useExecutionSimulation(isSimulation: boolean) {
     if (state === 'UPLOADING') {
       const runSequence = async () => {
         // Step 1: Pickup (Uploading)
+        setCurrentStepId('1');
         addLog('Uploading function package...', 'INFO');
         await new Promise(r => setTimeout(r, 2000));
         
         // Step 2: Sorting (Assigning Runner)
         setState('ASSIGNING_RUNNER');
+        setCurrentStepId('2');
         addLog('Upload complete. Requesting runner...', 'INFO');
         await new Promise(r => setTimeout(r, 2000));
         addLog('Runner i-0123456789 assigned.', 'INFO');
         
         // Step 3: Warehouse (Sandbox Prep)
         setState('PREPARING_SANDBOX');
+        setCurrentStepId('3');
         addLog('Initializing sandbox environment...', 'INFO');
         await new Promise(r => setTimeout(r, 3000));
         addLog('Sandbox environment ready.', 'INFO');
         
         // Step 4: Transit (Execution)
         setState('EXECUTING');
+        setCurrentStepId('4');
         addLog('Starting function execution...', 'INFO');
         await new Promise(r => setTimeout(r, 1500));
         addLog('Processing payload...', 'INFO');
@@ -40,6 +44,7 @@ export function useExecutionSimulation(isSimulation: boolean) {
         
         // Step 5: Delivered
         setState('DELIVERED');
+        setCurrentStepId('5');
         addLog('Sending response to client...', 'INFO');
       };
       
@@ -51,7 +56,10 @@ export function useExecutionSimulation(isSimulation: boolean) {
   const currentSteps = steps.map(step => {
     let status: StepStatus = 'PENDING';
     
-    if (state === 'PREPARING_SANDBOX') {
+    if (state === 'FAILED') {
+      if (step.id === currentStepId) status = 'FAILED';
+      else if (currentStepId && parseInt(step.id) < parseInt(currentStepId)) status = 'COMPLETED';
+    } else if (state === 'PREPARING_SANDBOX') {
       if (step.id === '1' || step.id === '2') status = 'COMPLETED';
       if (step.id === '3') status = 'RUNNING';
     } else if (state === 'EXECUTING') {

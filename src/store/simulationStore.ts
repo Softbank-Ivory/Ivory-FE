@@ -21,6 +21,7 @@ interface SimulationStore {
   startSimulation: () => void;
   reset: () => void;
   setState: (state: SimulationState) => void;
+  setCurrentStepId: (stepId: string | null) => void;
   addLog: (message: string, level?: 'INFO' | 'WARN' | 'ERROR') => void;
   setProgress: (progress: number) => void;
 }
@@ -56,6 +57,8 @@ export const useSimulationStore = create<SimulationStore>((set) => ({
 
   setState: (state) => set({ state }),
   
+  setCurrentStepId: (stepId: string | null) => set({ currentStepId: stepId }),
+
   addLog: (message, level = 'INFO') => set((prev) => ({
     logs: [...prev.logs, `[${new Date().toISOString().split('T')[1].split('.')[0]}] [${level}] ${message}`]
   })),

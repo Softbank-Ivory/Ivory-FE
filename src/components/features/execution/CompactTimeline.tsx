@@ -1,4 +1,4 @@
-import { CheckCircle, Circle, Loader2 } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 import type { Step } from './DeliveryTimeline';
@@ -35,6 +35,8 @@ export function CompactTimeline({ steps }: CompactTimelineProps) {
               >
                 {isCompleted ? (
                   <CheckCircle size={16} strokeWidth={3} />
+                ) : isFailed ? (
+                  <XCircle size={16} strokeWidth={3} />
                 ) : isRunning ? (
                   <motion.div
                     animate={{ rotate: 360 }}
