@@ -32,3 +32,10 @@ export interface Runner {
   cpuUsage: number;
   memoryUsage: number;
 }
+
+export interface Runtime {
+  id: string;
+  name: string;
+  version: string;
+  language: string;
+}

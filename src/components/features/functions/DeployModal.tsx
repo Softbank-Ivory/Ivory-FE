@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { X, Upload, Server, CheckCircle, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Upload, Server, CheckCircle, ArrowRight, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSimulationStore } from '@/store/simulationStore';
 import { useNavigate } from 'react-router-dom';
+import { functionService } from '@/services/functionService';
+import type { Runtime } from '@/types/api';
 
 interface DeployModalProps {
   isOpen: boolean;
@@ -13,9 +16,32 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
   const navigate = useNavigate();
   const { startSimulation, executionId } = useSimulationStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [runtimes, setRuntimes] = useState<Runtime[]>([]);
+  const [selectedRuntime, setSelectedRuntime] = useState<string>('');
+  const [isLoadingRuntimes, setIsLoadingRuntimes] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const loadRuntimes = async () => {
+        setIsLoadingRuntimes(true);
+        try {
+          const data = await functionService.getRuntimes();
+          setRuntimes(data);
+          if (data.length > 0) {
+            setSelectedRuntime(data[0].id);
+          }
+        } catch (error) {
+          console.error('Failed to load runtimes', error);
+        } finally {
+          setIsLoadingRuntimes(false);
+        }
+      };
+      loadRuntimes();
+    }
+  }, [isOpen]);
 
   const handleDeploy = () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !selectedRuntime) return;
     startSimulation();
     onClose();
     navigate(`/executions/${executionId}?simulation=true`);
@@ -23,32 +49,56 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-card w-full max-w-2xl rounded-3xl shadow-2xl border border-border overflow-hidden"
+        className="bg-card w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl border border-border"
       >
         {/* Header */}
-        <div className="px-8 py-6 border-b border-border flex items-center justify-between bg-muted/30">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
           <h2 className="text-2xl font-extrabold text-foreground">Deploy Function</h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <div className="p-8">
+        <div className="p-6">
           <motion.div 
             key="upload"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="space-y-8"
+            className="space-y-6"
           >
+            {/* Runtime Selection */}
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Runtime Environment</label>
+              <div className="relative">
+                <select
+                  value={selectedRuntime}
+                  onChange={(e) => setSelectedRuntime(e.target.value)}
+                  disabled={isLoadingRuntimes}
+                  className="w-full appearance-none bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-muted/50"
+                >
+                  {isLoadingRuntimes ? (
+                    <option>Loading runtimes...</option>
+                  ) : (
+                    runtimes.map((runtime) => (
+                      <option key={runtime.id} value={runtime.id}>
+                        {runtime.name} ({runtime.version})
+                      </option>
+                    ))
+                  )}
+                </select>
+                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={20} />
+              </div>
+            </div>
+
             {/* File Upload Area */}
-            <div className="border-3 border-dashed border-border rounded-3xl p-10 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer group">
+            <div className="border-3 border-dashed border-border rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer group">
               <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                   <Upload size={40} className="text-primary" />
@@ -100,7 +150,7 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
             <div className="flex justify-end">
               <button 
                 onClick={handleDeploy}
-                disabled={!selectedFile}
+                disabled={!selectedFile || !selectedRuntime}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Deploy & Run
@@ -110,6 +160,7 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
           </motion.div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 }
