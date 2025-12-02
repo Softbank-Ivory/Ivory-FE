@@ -7,6 +7,7 @@ import { useRuntimes, useDeployFunction } from '@/hooks/useFunctions';
 import { RuntimeSelector } from './deploy/RuntimeSelector';
 import { FileUploadZone } from './deploy/FileUploadZone';
 import { PayloadEditor } from './deploy/PayloadEditor';
+import { useToast } from '@/context/ToastContext';
 
 interface DeployModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface DeployModalProps {
 
 export function DeployModal({ isOpen, onClose }: DeployModalProps) {
   const navigate = useNavigate();
+  const { error: toastError } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const { data: runtimes = [], isLoading: isLoadingRuntimes } = useRuntimes();
@@ -60,7 +62,7 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
       navigate(`/executions/${response.invocationId}?simulation=true`);
     } catch (error) {
       console.error('Deployment failed', error);
-      alert('Deployment failed');
+      toastError('Deployment failed. Please try again.');
     }
   };
 
