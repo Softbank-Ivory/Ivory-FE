@@ -1,25 +1,10 @@
-import { useEffect, useState } from 'react';
 import { RunnerCard } from '@/components/features/runners/RunnerCard';
 import { RuntimeList } from '@/components/features/runtime/RuntimeList';
-import { runnerService } from '@/services/runnerService';
-import type { Runner } from '@/services/mock/runners';
+import { useRunners } from '@/hooks/useRunners';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function RunnersPage() {
-  const [runners, setRunners] = useState<Runner[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadRunners = async () => {
-      try {
-        const data = await runnerService.getRunners();
-        setRunners(data);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadRunners();
-  }, []);
+  const { data: runners = [], isLoading } = useRunners();
 
   if (isLoading) return <LoadingScreen />;
 

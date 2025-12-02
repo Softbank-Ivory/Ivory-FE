@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Upload, Server, CheckCircle, ArrowRight, ChevronDown } from 'lucide-react';
+import { X, Server, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useSimulationStore } from '@/store/simulationStore';
 import { useNavigate } from 'react-router-dom';
-import { functionService } from '@/services/functionService';
-import type { Runtime } from '@/types/api';
+import { useRuntimes, useDeployFunction } from '@/hooks/useFunctions';
+import { RuntimeSelector } from './deploy/RuntimeSelector';
+import { FileUploadZone } from './deploy/FileUploadZone';
+import { PayloadEditor } from './deploy/PayloadEditor';
 
 interface DeployModalProps {
   isOpen: boolean;
@@ -14,35 +15,20 @@ interface DeployModalProps {
 
 export function DeployModal({ isOpen, onClose }: DeployModalProps) {
   const navigate = useNavigate();
-  const { startSimulation, executionId } = useSimulationStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
-  const [runtimes, setRuntimes] = useState<Runtime[]>([]);
+  const { data: runtimes = [], isLoading: isLoadingRuntimes } = useRuntimes();
+  const { mutateAsync: deployFunction, isPending: isDeploying } = useDeployFunction();
   const [selectedRuntime, setSelectedRuntime] = useState<string>('');
   const [handler, setHandler] = useState<string>('main.handler');
   const [payload, setPayload] = useState<string>('{}');
-  const [isLoadingRuntimes, setIsLoadingRuntimes] = useState(false);
-  const [isDeploying, setIsDeploying] = useState(false);
+  const [payloadError, setPayloadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      const loadRuntimes = async () => {
-        setIsLoadingRuntimes(true);
-        try {
-          const data = await functionService.getRuntimes();
-          setRuntimes(data);
-          if (data.length > 0) {
-            setSelectedRuntime(data[0].id);
-          }
-        } catch (error) {
-          console.error('Failed to load runtimes', error);
-        } finally {
-          setIsLoadingRuntimes(false);
-        }
-      };
-      loadRuntimes();
+    if (isOpen && runtimes.length > 0 && !selectedRuntime) {
+      setSelectedRuntime(runtimes[0].id);
     }
-  }, [isOpen]);
+  }, [isOpen, runtimes, selectedRuntime]);
 
   const handleFileSelect = async (file: File) => {
     setSelectedFile(file);
@@ -53,32 +39,28 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
   const handleDeploy = async () => {
     if (!selectedFile || !selectedRuntime || !fileContent) return;
     
-    setIsDeploying(true);
     try {
       let parsedPayload = {};
       try {
         parsedPayload = JSON.parse(payload);
+        setPayloadError(null);
       } catch (e) {
-        alert('Invalid JSON payload');
-        setIsDeploying(false);
+        setPayloadError('Invalid JSON format');
         return;
       }
 
-      const response = await functionService.invokeFunction({
+      const response = await deployFunction({
         code: fileContent,
         runtime: selectedRuntime,
         handler: handler,
         payload: parsedPayload
       });
 
-      startSimulation();
       onClose();
       navigate(`/executions/${response.invocationId}?simulation=true`);
     } catch (error) {
       console.error('Deployment failed', error);
       alert('Deployment failed');
-    } finally {
-      setIsDeploying(false);
     }
   };
 
@@ -110,28 +92,12 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
           >
             {/* Runtime Selection */}
             <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Runtime Environment</label>
-                <div className="relative">
-                  <select
-                    value={selectedRuntime}
-                    onChange={(e) => setSelectedRuntime(e.target.value)}
-                    disabled={isLoadingRuntimes}
-                    className="w-full appearance-none bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-muted/50"
-                  >
-                    {isLoadingRuntimes ? (
-                      <option>Loading runtimes...</option>
-                    ) : (
-                      runtimes.map((runtime) => (
-                        <option key={runtime.id} value={runtime.id}>
-                          {runtime.name} ({runtime.version})
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={20} />
-                </div>
-              </div>
+              <RuntimeSelector 
+                runtimes={runtimes}
+                selectedRuntime={selectedRuntime}
+                onSelect={setSelectedRuntime}
+                isLoading={isLoadingRuntimes}
+              />
 
               <div className="space-y-3">
                 <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Handler</label>
@@ -146,45 +112,18 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
             </div>
 
             {/* Payload Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Test Event JSON</label>
-              <textarea
-                value={payload}
-                onChange={(e) => setPayload(e.target.value)}
-                placeholder='{"key": "value"}'
-                className="w-full h-32 bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none placeholder:text-muted-foreground/50"
-              />
-            </div>
+            <PayloadEditor 
+              payload={payload}
+              setPayload={setPayload}
+              error={payloadError}
+              setError={setPayloadError}
+            />
 
             {/* File Upload Area */}
-            <div className="border-3 border-dashed border-border rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:bg-muted/30 transition-colors cursor-pointer group">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <Upload size={40} className="text-primary" />
-                </div>
-              </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Upload Source Code</h3>
-              <p className="text-muted-foreground font-medium mb-6">Select a single source file (e.g., .py, .js, .go)</p>
-              <input 
-                type="file" 
-                className="hidden" 
-                id="file-upload"
-                accept=".py,.js,.ts,.go,.java,.rb,.php"
-                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
-              />
-              <label 
-                htmlFor="file-upload"
-                className="bg-card border-2 border-primary text-primary px-8 py-3 rounded-2xl font-bold hover:bg-primary hover:text-primary-foreground transition-all cursor-pointer shadow-sm"
-              >
-                Select File
-              </label>
-              {selectedFile && (
-                <div className="mt-4 flex items-center gap-2 text-green-600 font-bold bg-green-100 px-4 py-2 rounded-xl">
-                  <CheckCircle size={18} />
-                  {selectedFile.name}
-                </div>
-              )}
-            </div>
+            <FileUploadZone 
+              selectedFile={selectedFile}
+              onFileSelect={handleFileSelect}
+            />
 
             {/* Runner Pool Status Preview */}
             <div className="bg-muted/30 rounded-2xl p-6 border border-border">

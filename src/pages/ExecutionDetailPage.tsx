@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { LiveLogs } from '../components/features/execution/LiveLogs';
@@ -7,14 +7,13 @@ import { CompactTimeline } from '@/components/features/execution/CompactTimeline
 import type { Step } from '@/components/features/execution/DeliveryTimeline';
 import { Package, FileCode, Box, Truck, CheckCircle } from 'lucide-react';
 import { useExecutionStream } from '@/hooks/useExecutionStream';
-import { executionService } from '@/services/executionService';
+import { useExecutionMetadata } from '@/hooks/useExecutions';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function ExecutionDetailPage() {
   const { executionId } = useParams();
-  const { status, logs, result, error } = useExecutionStream(executionId);
-  
-  const [metadata, setMetadata] = useState<any>(null);
+  const { status, logs } = useExecutionStream(executionId);
+  const { data: metadata, isLoading: isLoadingMetadata } = useExecutionMetadata(executionId);
 
   // Helper to generate steps based on current status
   const getSteps = (): Step[] => {
@@ -73,17 +72,7 @@ export function ExecutionDetailPage() {
 
   const currentSteps = getSteps();
 
-  useEffect(() => {
-    const loadMetadata = async () => {
-      if (executionId) {
-        const data = await executionService.getExecutionMetadata(executionId);
-        setMetadata(data);
-      }
-    };
-    loadMetadata();
-  }, [executionId]);
-
-  if (!metadata) {
+  if (isLoadingMetadata || !metadata) {
     return <LoadingScreen />;
   }
 

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Package, Truck, Box, CheckCircle, FileCode, XCircle } from 'lucide-react';
-import { useSimulationStore } from '@/store/simulationStore';
+
 import { LottieScene } from '@/components/ui/LottieScene';
 import { ANIMATION_URLS } from '@/config/animations';
 

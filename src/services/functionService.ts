@@ -1,11 +1,21 @@
-import type { FunctionDef, Runtime, InvocationRequest, InvocationResponse } from '@/types/api';
-import { MOCK_FUNCTIONS } from './mock/functions';
-import { MOCK_RUNTIMES } from './mock/runtimes';
-import { invocationsApi } from '@/api/endpoints/invocations';
 
-export const functionService = {
+
+import type { FunctionDef, InvocationRequest, InvocationResponse } from '@/types/api';
+import { MOCK_FUNCTIONS } from './mock/functions';
+
+
+import { api } from '@/lib/api';
+
+export interface FunctionService {
+  getFunctions(): Promise<FunctionDef[]>;
+  getFunction(name: string): Promise<FunctionDef | undefined>;
+  getFunctionDetails(id: string): Promise<any>; // TODO: Define proper type for details
+
+  invokeFunction(request: InvocationRequest): Promise<InvocationResponse>;
+}
+
+const mockFunctionService: FunctionService = {
   getFunctions: async (): Promise<FunctionDef[]> => {
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500));
     return MOCK_FUNCTIONS;
   },
@@ -19,7 +29,7 @@ export const functionService = {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id,
-      name: id, // In a real app, we'd fetch by ID
+      name: id,
       stats: {
         latency: 245,
         successRate: 99.2,
@@ -66,14 +76,40 @@ export const functionService = {
     };
   },
 
-  getRuntimes: async (): Promise<Runtime[]> => {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return MOCK_RUNTIMES;
+
+
+  invokeFunction: async (request: InvocationRequest): Promise<InvocationResponse> => {
+    console.log('Mock Invocation:', request);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return {
+      invocationId: 'inv-' + Date.now(),
+      status: 'REQUEST_RECEIVED'
+    };
+  },
+};
+
+const realFunctionService: FunctionService = {
+  getFunctions: async (): Promise<FunctionDef[]> => {
+    const response = await api.get<FunctionDef[]>('/api/functions');
+    return response.data;
+  },
+
+  getFunction: async (name: string): Promise<FunctionDef | undefined> => {
+    const response = await api.get<FunctionDef>(`/api/functions/${name}`);
+    return response.data;
+  },
+
+  getFunctionDetails: async (id: string) => {
+    const response = await api.get(`/api/functions/${id}/details`);
+    return response.data;
   },
 
   invokeFunction: async (request: InvocationRequest): Promise<InvocationResponse> => {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return invocationsApi.invoke(request);
+    const response = await api.post<InvocationResponse>('/api/invocations', request);
+    return response.data;
   },
 };
+
+const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+
+export const functionService = useMock ? mockFunctionService : realFunctionService;

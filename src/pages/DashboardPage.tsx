@@ -1,25 +1,12 @@
-import { useEffect, useState } from 'react';
 import { ParcelCard } from '@/components/features/dashboard/ParcelCard';
-import { dashboardService } from '@/services/dashboardService';
+import { useDashboardStats, useRecentExecutions } from '@/hooks/useDashboard';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function DashboardPage() {
-  const [stats, setStats] = useState<any>(null);
-  const [recentExecutions, setRecentExecutions] = useState<any[]>([]);
+  const { data: stats, isLoading: isLoadingStats } = useDashboardStats();
+  const { data: recentExecutions = [], isLoading: isLoadingExecutions } = useRecentExecutions();
 
-  useEffect(() => {
-    const loadData = async () => {
-      const [statsData, executionsData] = await Promise.all([
-        dashboardService.getStats(),
-        dashboardService.getRecentExecutions(),
-      ]);
-      setStats(statsData);
-      setRecentExecutions(executionsData);
-    };
-    loadData();
-  }, []);
-
-  if (!stats) return <LoadingScreen />;
+  if (isLoadingStats || isLoadingExecutions) return <LoadingScreen />;
 
 
   return (

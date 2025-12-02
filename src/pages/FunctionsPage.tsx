@@ -1,29 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, Play, MoreVertical } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DeployModal } from '@/components/features/functions/DeployModal';
-import { functionService } from '@/services/functionService';
-import type { FunctionDef } from '@/types/api';
+import { useFunctions } from '@/hooks/useFunctions';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function FunctionsPage() {
   const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
-  const [functions, setFunctions] = useState<FunctionDef[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const loadFunctions = async () => {
-      try {
-        const data = await functionService.getFunctions();
-        setFunctions(data);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadFunctions();
-  }, []);
+  const { data: functions = [], isLoading, error } = useFunctions();
 
   if (isLoading) return <LoadingScreen />;
+  if (error) return <div className="p-8 text-red-500">Failed to load functions</div>;
 
   return (
     <div className="p-8 space-y-6">

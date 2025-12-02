@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ExecutionStatus, LogEntry } from '@/types/api';
+import { executionStreamService } from '@/services/streamService';
 
 interface UseExecutionStreamReturn {
   status: ExecutionStatus;
@@ -30,78 +31,18 @@ export function useExecutionStream(invocationId: string | undefined): UseExecuti
     setDurationMs(null);
     logsRef.current = [];
 
-    // MOCK SIMULATION
-    // In a real app, this would be: const eventSource = new EventSource(\`/api/invocations/\${invocationId}/stream\`);
-    
-    let isMounted = true;
-    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    // Connect to stream service
+    const cleanup = executionStreamService.connect(invocationId, {
+      onStatusChange: setStatus,
+      onLog: (log: LogEntry) => {
+        setLogs((prev) => [...prev, log]);
+      },
+      onResult: setResult,
+      onError: setError,
+      onDuration: setDurationMs
+    });
 
-    const addLog = (message: string) => {
-      if (!isMounted) return;
-      const newLog: LogEntry = {
-        id: Math.random().toString(36).substring(7),
-        timestamp: new Date().toISOString(),
-        level: 'INFO',
-        message
-      };
-      logsRef.current = [...logsRef.current, newLog];
-      setLogs([...logsRef.current]);
-    };
-
-    const simulate = async () => {
-      // 1. REQUEST_RECEIVED (Already set)
-      
-      // 2. CODE_FETCHING
-      timeouts.push(setTimeout(() => {
-        if (isMounted) setStatus('CODE_FETCHING');
-      }, 1000));
-
-      // 3. SANDBOX_PREPARING
-      timeouts.push(setTimeout(() => {
-        if (isMounted) setStatus('SANDBOX_PREPARING');
-      }, 2000));
-
-      // 4. EXECUTING
-      timeouts.push(setTimeout(() => {
-        if (isMounted) {
-          setStatus('EXECUTING');
-          addLog('Function execution started');
-        }
-      }, 3000));
-
-      // Logs during execution
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Importing modules...'); }, 3000));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Processing event payload...'); }, 3500));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Connecting to database...'); }, 4000));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Query executed successfully.'); }, 4500));
-
-      // 5. COMPLETED
-      timeouts.push(setTimeout(() => {
-        if (isMounted) {
-          // Randomly succeed or fail for demo purposes, or always succeed
-          const isSuccess = true; 
-          
-          if (isSuccess) {
-            setStatus('COMPLETED');
-            setResult({ statusCode: 200, body: '{"message":"hi"}' });
-            setDurationMs(2500);
-            addLog('Function execution completed successfully');
-          } else {
-            setStatus('FAILED');
-            setError('NameError: x is not defined');
-            setDurationMs(2500);
-            addLog('Function execution failed');
-          }
-        }
-      }, 5500));
-    };
-
-    simulate();
-
-    return () => {
-      isMounted = false;
-      timeouts.forEach(clearTimeout);
-    };
+    return cleanup;
   }, [invocationId]);
 
   return { status, logs, result, error, durationMs };

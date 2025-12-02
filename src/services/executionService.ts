@@ -1,8 +1,12 @@
 import { MOCK_EXECUTION_METADATA } from './mock/executions';
+import { api } from '@/lib/api';
 
-export const executionService = {
+export interface ExecutionService {
+  getExecutionMetadata(executionId: string): Promise<any>; // TODO: Define proper type
+}
+
+const mockExecutionService: ExecutionService = {
   getExecutionMetadata: async (executionId: string) => {
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id: executionId,
@@ -10,3 +14,14 @@ export const executionService = {
     };
   },
 };
+
+const realExecutionService: ExecutionService = {
+  getExecutionMetadata: async (executionId: string) => {
+    const response = await api.get(`/api/executions/${executionId}`);
+    return response.data;
+  },
+};
+
+const useMock = import.meta.env.VITE_USE_MOCK === 'true';
+
+export const executionService = useMock ? mockExecutionService : realExecutionService;
