@@ -87,7 +87,40 @@ Ensure that the TypeScript interfaces in `src/types/api.ts` match the actual JSO
 
 -   If the backend returns fields in `snake_case`, you may need to map them to `camelCase` in the Service Layer or update the types to match.
 
-## 6. Cleanup
+## 6. Real-time Communication (SSE)
+
+The backend uses Server-Sent Events (SSE) to push real-time updates for execution status and logs.
+
+### Implementation Strategy
+
+1.  **Endpoint**: Connect to `/api/stream/{executionId}` using the `EventSource` API.
+2.  **Events**:
+    *   `STATUS`: Updates the execution status (e.g., RUNNING, COMPLETED, FAILED).
+    *   `LOG`: Appends new log entries.
+3.  **Custom Hook**: Implement a `useExecutionStream` hook to manage the connection and state updates.
+
+**Example (`src/hooks/useExecutionStream.ts`):**
+```typescript
+export function useExecutionStream(executionId: string) {
+  useEffect(() => {
+    const eventSource = new EventSource(\`/api/stream/\${executionId}\`);
+
+    eventSource.addEventListener('STATUS', (event) => {
+      const status = JSON.parse(event.data);
+      // Update state
+    });
+
+    eventSource.addEventListener('LOG', (event) => {
+      const log = JSON.parse(event.data);
+      // Append log
+    });
+
+    return () => eventSource.close();
+  }, [executionId]);
+}
+```
+
+## 7. Cleanup
 
 Once the integration is verified and working:
 

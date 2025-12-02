@@ -1,5 +1,7 @@
-import type { FunctionDef } from '@/types/api';
+import type { FunctionDef, Runtime, InvocationRequest, InvocationResponse } from '@/types/api';
 import { MOCK_FUNCTIONS } from './mock/functions';
+import { MOCK_RUNTIMES } from './mock/runtimes';
+import { invocationsApi } from '@/api/endpoints/invocations';
 
 export const functionService = {
   getFunctions: async (): Promise<FunctionDef[]> => {
@@ -62,5 +64,16 @@ export const functionService = {
         },
       ]
     };
+  },
+
+  getRuntimes: async (): Promise<Runtime[]> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return MOCK_RUNTIMES;
+  },
+
+  invokeFunction: async (request: InvocationRequest): Promise<InvocationResponse> => {
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return invocationsApi.invoke(request);
   },
 };

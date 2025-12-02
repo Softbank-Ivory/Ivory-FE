@@ -8,14 +8,27 @@ export interface FunctionDef {
   lastExecutedAt?: string;
 }
 
+export type ExecutionStatus =
+  | 'REQUEST_RECEIVED'
+  | 'CODE_FETCHING'
+  | 'SANDBOX_PREPARING'
+  | 'EXECUTING'
+  | 'COMPLETED'
+  | 'FAILED';
+
 export interface Execution {
   id: string;
   functionId: string;
-  status: 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  status: ExecutionStatus;
   startTime: string;
   endTime?: string;
   duration?: number;
   logs: LogEntry[];
+  result?: {
+    statusCode: number;
+    body: string;
+  };
+  errorMessage?: string;
 }
 
 export interface LogEntry {
@@ -31,4 +44,24 @@ export interface Runner {
   region: string;
   cpuUsage: number;
   memoryUsage: number;
+}
+
+export interface Runtime {
+  id: string;
+  name: string;
+  version: string;
+  language: string;
+  status: 'AVAILABLE' | 'MAINTENANCE';
+}
+
+export interface InvocationRequest {
+  code: string;
+  runtime: string;
+  handler: string;
+  payload: Record<string, any>;
+}
+
+export interface InvocationResponse {
+  invocationId: string;
+  status: string;
 }

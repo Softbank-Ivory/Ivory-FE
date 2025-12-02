@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RunnerCard } from '@/components/features/runners/RunnerCard';
+import { RuntimeList } from '@/components/features/runtime/RuntimeList';
 import { runnerService } from '@/services/runnerService';
 import type { Runner } from '@/services/mock/runners';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
@@ -45,6 +46,11 @@ export function RunnersPage() {
         {runners.map((runner) => (
           <RunnerCard key={runner.id} runner={runner} />
         ))}
+      </div>
+
+      <div className="pt-8 border-t border-border">
+        <h2 className="text-2xl font-bold text-foreground mb-6">Supported Runtimes</h2>
+        <RuntimeList />
       </div>
     </div>
   );
