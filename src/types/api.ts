@@ -8,7 +8,11 @@ export interface FunctionDef {
   lastExecutedAt?: string;
 }
 
+<<<<<<< HEAD
 export type ExecutionStatus =
+=======
+export type ExecutionStatus =
+>>>>>>> 88b12d15a89e907eca08689b4b924f1691dff027
   | 'REQUEST_RECEIVED'
   | 'CODE_FETCHING'
   | 'SANDBOX_PREPARING'
