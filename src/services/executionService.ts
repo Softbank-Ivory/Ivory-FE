@@ -1,4 +1,4 @@
-import { MOCK_EXECUTION_METADATA, MOCK_EXECUTION_STEPS } from './mock/executions';
+import { MOCK_EXECUTION_METADATA } from './mock/executions';
 
 export const executionService = {
   getExecutionMetadata: async (executionId: string) => {
@@ -8,9 +8,5 @@ export const executionService = {
       id: executionId,
       ...MOCK_EXECUTION_METADATA,
     };
-  },
-
-  getExecutionSteps: () => {
-    return MOCK_EXECUTION_STEPS;
   },
 };

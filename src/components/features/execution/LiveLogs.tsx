@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Terminal, Download, Pause, Play, Filter } from 'lucide-react';
-import { useSimulationStore } from '@/store/simulationStore';
+import type { LogEntry } from '@/types/api';
 
-export function LiveLogs() {
-  const { logs } = useSimulationStore();
+interface LiveLogsProps {
+  logs: LogEntry[];
+}
+
+export function LiveLogs({ logs }: LiveLogsProps) {
+  // const { logs } = useSimulationStore();
   const [isPaused, setIsPaused] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +49,7 @@ export function LiveLogs() {
             key={index}
             className="flex gap-4 hover:bg-[#5D4037]/50 px-3 py-1 rounded-lg transition-colors"
           >
-            <span className="text-[#EFEBE9] break-all">{log}</span>
+            <span className="text-[#EFEBE9] break-all">[{log.timestamp}] {log.message}</span>
           </div>
         ))}
         {logs.length === 0 && (

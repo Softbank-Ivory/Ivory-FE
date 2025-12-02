@@ -4,14 +4,20 @@ import { useSimulationStore } from '@/store/simulationStore';
 import { LottieScene } from '@/components/ui/LottieScene';
 import { ANIMATION_URLS } from '@/config/animations';
 
-export function DeliveryStageVisualizer() {
-  const { state } = useSimulationStore();
+import type { ExecutionStatus } from '@/types/api';
+
+interface DeliveryStageVisualizerProps {
+  status: ExecutionStatus;
+}
+
+export function DeliveryStageVisualizer({ status }: DeliveryStageVisualizerProps) {
+  // const { state } = useSimulationStore();
 
   return (
     <div className="flex-1 relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-background flex items-center justify-center">
       <AnimatePresence mode="wait">
         {/* Stage 1: Pickup (Request Received) */}
-        {(state === 'IDLE' || state === 'UPLOADING') && (
+        {(status === 'REQUEST_RECEIVED') && (
           <motion.div
             key="pickup"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -40,7 +46,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 2: Sorting (Code Fetching) */}
-        {state === 'ASSIGNING_RUNNER' && (
+        {status === 'CODE_FETCHING' && (
           <motion.div
             key="sorting"
             initial={{ opacity: 0, x: 100 }}
@@ -61,7 +67,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 3: Warehouse (Sandbox Prep) */}
-        {state === 'PREPARING_SANDBOX' && (
+        {status === 'SANDBOX_PREPARING' && (
           <motion.div
             key="warehouse"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -82,7 +88,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 4: Transit (Execution) */}
-        {state === 'EXECUTING' && (
+        {status === 'EXECUTING' && (
           <motion.div
             key="transit"
             initial={{ opacity: 0, x: -50 }}
@@ -103,7 +109,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 5: Delivered (Response) */}
-        {state === 'DELIVERED' && (
+        {status === 'COMPLETED' && (
           <motion.div
             key="delivered"
             initial={{ opacity: 0, scale: 0.5 }}
@@ -125,7 +131,7 @@ export function DeliveryStageVisualizer() {
         )}
 
         {/* Stage 6: Failed */}
-        {state === 'FAILED' && (
+        {status === 'FAILED' && (
           <motion.div
             key="failed"
             initial={{ opacity: 0, scale: 0.5 }}

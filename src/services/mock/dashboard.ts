@@ -1,4 +1,4 @@
-import type { ExecutionStatus } from '@/components/features/dashboard/ParcelCard';
+import type { ExecutionStatus } from '@/types/api';
 
 export const MOCK_DASHBOARD_STATS = {
   totalExecutions: 1234,
@@ -10,7 +10,7 @@ export const MOCK_RECENT_EXECUTIONS = [
   {
     id: 'exec-123',
     functionName: 'process-order',
-    status: 'RUNNING' as ExecutionStatus,
+    status: 'EXECUTING' as ExecutionStatus,
     startTime: '10:42:05 AM',
   },
   {

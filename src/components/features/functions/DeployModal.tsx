@@ -16,9 +16,13 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
   const navigate = useNavigate();
   const { startSimulation, executionId } = useSimulationStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
   const [runtimes, setRuntimes] = useState<Runtime[]>([]);
   const [selectedRuntime, setSelectedRuntime] = useState<string>('');
+  const [handler, setHandler] = useState<string>('main.handler');
+  const [payload, setPayload] = useState<string>('{}');
   const [isLoadingRuntimes, setIsLoadingRuntimes] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -40,11 +44,42 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
     }
   }, [isOpen]);
 
-  const handleDeploy = () => {
-    if (!selectedFile || !selectedRuntime) return;
-    startSimulation();
-    onClose();
-    navigate(`/executions/${executionId}?simulation=true`);
+  const handleFileSelect = async (file: File) => {
+    setSelectedFile(file);
+    const text = await file.text();
+    setFileContent(text);
+  };
+
+  const handleDeploy = async () => {
+    if (!selectedFile || !selectedRuntime || !fileContent) return;
+    
+    setIsDeploying(true);
+    try {
+      let parsedPayload = {};
+      try {
+        parsedPayload = JSON.parse(payload);
+      } catch (e) {
+        alert('Invalid JSON payload');
+        setIsDeploying(false);
+        return;
+      }
+
+      const response = await functionService.invokeFunction({
+        code: fileContent,
+        runtime: selectedRuntime,
+        handler: handler,
+        payload: parsedPayload
+      });
+
+      startSimulation();
+      onClose();
+      navigate(`/executions/${response.invocationId}?simulation=true`);
+    } catch (error) {
+      console.error('Deployment failed', error);
+      alert('Deployment failed');
+    } finally {
+      setIsDeploying(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -74,27 +109,51 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
             className="space-y-6"
           >
             {/* Runtime Selection */}
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Runtime Environment</label>
-              <div className="relative">
-                <select
-                  value={selectedRuntime}
-                  onChange={(e) => setSelectedRuntime(e.target.value)}
-                  disabled={isLoadingRuntimes}
-                  className="w-full appearance-none bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-muted/50"
-                >
-                  {isLoadingRuntimes ? (
-                    <option>Loading runtimes...</option>
-                  ) : (
-                    runtimes.map((runtime) => (
-                      <option key={runtime.id} value={runtime.id}>
-                        {runtime.name} ({runtime.version})
-                      </option>
-                    ))
-                  )}
-                </select>
-                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={20} />
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Runtime Environment</label>
+                <div className="relative">
+                  <select
+                    value={selectedRuntime}
+                    onChange={(e) => setSelectedRuntime(e.target.value)}
+                    disabled={isLoadingRuntimes}
+                    className="w-full appearance-none bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer hover:bg-muted/50"
+                  >
+                    {isLoadingRuntimes ? (
+                      <option>Loading runtimes...</option>
+                    ) : (
+                      runtimes.map((runtime) => (
+                        <option key={runtime.id} value={runtime.id}>
+                          {runtime.name} ({runtime.version})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={20} />
+                </div>
               </div>
+
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Handler</label>
+                <input
+                  type="text"
+                  value={handler}
+                  onChange={(e) => setHandler(e.target.value)}
+                  placeholder="e.g. main.handler"
+                  className="w-full bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-muted-foreground/50"
+                />
+              </div>
+            </div>
+
+            {/* Payload Input */}
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Test Event JSON</label>
+              <textarea
+                value={payload}
+                onChange={(e) => setPayload(e.target.value)}
+                placeholder='{"key": "value"}'
+                className="w-full h-32 bg-muted/30 border border-border text-foreground px-6 py-4 rounded-2xl font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none placeholder:text-muted-foreground/50"
+              />
             </div>
 
             {/* File Upload Area */}
@@ -104,13 +163,14 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
                   <Upload size={40} className="text-primary" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-2">Upload Function Code</h3>
-              <p className="text-muted-foreground font-medium mb-6">Drag & drop your .zip file here or click to browse</p>
+              <h3 className="text-xl font-bold text-foreground mb-2">Upload Source Code</h3>
+              <p className="text-muted-foreground font-medium mb-6">Select a single source file (e.g., .py, .js, .go)</p>
               <input 
                 type="file" 
                 className="hidden" 
                 id="file-upload"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                accept=".py,.js,.ts,.go,.java,.rb,.php"
+                onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
               />
               <label 
                 htmlFor="file-upload"
@@ -150,10 +210,10 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
             <div className="flex justify-end">
               <button 
                 onClick={handleDeploy}
-                disabled={!selectedFile || !selectedRuntime}
+                disabled={!selectedFile || !selectedRuntime || !handler || isDeploying}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Deploy & Run
+                {isDeploying ? 'Deploying...' : 'Deploy & Run'}
                 <ArrowRight size={24} />
               </button>
             </div>

@@ -1,20 +1,77 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { LiveLogs } from '../components/features/execution/LiveLogs';
 import { DeliveryStageVisualizer } from '@/components/features/execution/DeliveryStageVisualizer';
 import { CompactTimeline } from '@/components/features/execution/CompactTimeline';
-import { useExecutionSimulation } from '@/hooks/useExecutionSimulation';
+import type { Step } from '@/components/features/execution/DeliveryTimeline';
+import { Package, FileCode, Box, Truck, CheckCircle } from 'lucide-react';
+import { useExecutionStream } from '@/hooks/useExecutionStream';
 import { executionService } from '@/services/executionService';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function ExecutionDetailPage() {
   const { executionId } = useParams();
-  const [searchParams] = useSearchParams();
-  const isSimulation = searchParams.get('simulation') === 'true';
+  const { status, logs, result, error } = useExecutionStream(executionId);
   
-  const { currentSteps, state } = useExecutionSimulation(isSimulation);
   const [metadata, setMetadata] = useState<any>(null);
+
+  // Helper to generate steps based on current status
+  const getSteps = (): Step[] => {
+    const steps: Step[] = [
+      { id: 'request', label: 'Request', icon: Package, status: 'PENDING' },
+      { id: 'fetch', label: 'Fetch Code', icon: FileCode, status: 'PENDING' },
+      { id: 'prepare', label: 'Prepare', icon: Box, status: 'PENDING' },
+      { id: 'execute', label: 'Execute', icon: Truck, status: 'PENDING' },
+      { id: 'complete', label: 'Complete', icon: CheckCircle, status: 'PENDING' },
+    ];
+
+    const statusOrder = [
+      'REQUEST_RECEIVED',
+      'CODE_FETCHING',
+      'SANDBOX_PREPARING',
+      'EXECUTING',
+      'COMPLETED'
+    ];
+
+    const currentIndex = statusOrder.indexOf(status);
+    const isFailed = status === 'FAILED';
+
+    return steps.map((step, index) => {
+      // Handle FAILED state
+      if (isFailed) {
+        // If we don't know exactly where it failed, we might assume it failed at the last active step
+        // For simplicity in this mock, if status is FAILED, we mark everything as PENDING except the one that failed? 
+        // Or better, we need to know *which* step failed. 
+        // Since ExecutionStatus 'FAILED' is generic, let's assume failure happens during execution for now or mark the last one failed.
+        // But without granular failure state, let's just mark the current active one as failed if we could track it.
+        // For now, let's just say if status is FAILED, the last step is FAILED and others are COMPLETED? 
+        // Actually, let's rely on the fact that 'FAILED' is a terminal state.
+        // If we want to show *where* it failed, we'd need more info. 
+        // Let's assume failure happens at 'execute' for this demo if status is FAILED.
+        if (index < 3) return { ...step, status: 'COMPLETED' };
+        if (index === 3) return { ...step, status: 'FAILED' };
+        return { ...step, status: 'PENDING' };
+      }
+
+      if (currentIndex === -1) return step; // Should not happen for valid statuses
+
+      // Special case for COMPLETED status: All steps including the last one should be COMPLETED
+      if (status === 'COMPLETED') {
+        return { ...step, status: 'COMPLETED' };
+      }
+
+      if (index < currentIndex) {
+        return { ...step, status: 'COMPLETED' };
+      } else if (index === currentIndex) {
+        return { ...step, status: 'RUNNING' };
+      } else {
+        return { ...step, status: 'PENDING' };
+      }
+    });
+  };
+
+  const currentSteps = getSteps();
 
   useEffect(() => {
     const loadMetadata = async () => {
@@ -44,8 +101,12 @@ export function ExecutionDetailPage() {
           <div>
             <h1 className="text-xl font-extrabold text-foreground flex items-center gap-3">
               Execution #{executionId}
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-primary text-primary-foreground shadow-sm">
-                {state}
+              <span className={`text-xs font-bold px-3 py-1 rounded-full shadow-sm ${
+                status === 'COMPLETED' ? 'bg-green-500 text-white' :
+                status === 'FAILED' ? 'bg-red-500 text-white' :
+                'bg-primary text-primary-foreground'
+              }`}>
+                {status}
               </span>
             </h1>
           </div>
@@ -57,7 +118,7 @@ export function ExecutionDetailPage() {
         <div className="w-1/2 flex flex-col border-r border-border relative bg-muted/30 p-6 gap-6">
           {/* Visualizer Card */}
           <div className="flex-1 bg-card rounded-3xl border border-border shadow-sm overflow-hidden flex flex-col">
-            <DeliveryStageVisualizer />
+            <DeliveryStageVisualizer status={status} />
             <CompactTimeline steps={currentSteps} />
           </div>
         </div>
@@ -65,7 +126,7 @@ export function ExecutionDetailPage() {
         {/* Right: Logs & Metadata */}
         <div className="w-1/2 flex flex-col bg-background p-6 gap-6 overflow-hidden">
           <div className="flex-1 min-h-0 shadow-lg rounded-3xl">
-            <LiveLogs />
+            <LiveLogs logs={logs} />
           </div>
           
           {/* Metadata Panel */}

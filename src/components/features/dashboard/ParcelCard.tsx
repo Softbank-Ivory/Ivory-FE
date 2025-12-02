@@ -2,7 +2,7 @@ import { Package, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
 
-export type ExecutionStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+import type { ExecutionStatus } from '@/types/api';
 
 interface ParcelCardProps {
   id: string;
@@ -12,14 +12,26 @@ interface ParcelCardProps {
   duration?: string;
 }
 
-const statusConfig = {
-  PENDING: {
+const statusConfig: Record<ExecutionStatus, { icon: any; color: string; bg: string; border: string }> = {
+  REQUEST_RECEIVED: {
     icon: Package,
     color: 'text-secondary-foreground',
     bg: 'bg-secondary',
     border: 'border-secondary',
   },
-  RUNNING: {
+  CODE_FETCHING: {
+    icon: Truck,
+    color: 'text-blue-600',
+    bg: 'bg-blue-100',
+    border: 'border-blue-200',
+  },
+  SANDBOX_PREPARING: {
+    icon: Truck,
+    color: 'text-purple-600',
+    bg: 'bg-purple-100',
+    border: 'border-purple-200',
+  },
+  EXECUTING: {
     icon: Truck,
     color: 'text-primary-foreground',
     bg: 'bg-primary',
@@ -86,7 +98,7 @@ export function ParcelCard({ id, functionName, status, startTime, duration }: Pa
               width:
                 status === 'COMPLETED' || status === 'FAILED'
                   ? '100%'
-                  : status === 'RUNNING'
+                  : status === 'EXECUTING' || status === 'CODE_FETCHING' || status === 'SANDBOX_PREPARING'
                     ? '60%'
                     : '10%',
             }}
