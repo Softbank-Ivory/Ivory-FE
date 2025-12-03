@@ -74,3 +74,24 @@ export interface ExecutionMetadata {
   region: string;
   [key: string]: unknown; // Allow other properties
 }
+
+export interface FunctionDetails {
+  id: string;
+  name: string;
+  stats: {
+    latency: number;
+    successRate: number;
+    errors: number;
+  };
+  latencyHistory: {
+    name: string;
+    latency: number;
+  }[];
+  recentExecutions: {
+    id: string;
+    functionName: string;
+    status: string;
+    startTime: string;
+    duration?: string;
+  }[];
+}

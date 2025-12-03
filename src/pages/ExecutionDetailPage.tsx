@@ -4,10 +4,11 @@ import { ArrowLeft } from 'lucide-react';
 import { LiveLogs } from '../components/features/execution/LiveLogs';
 import { DeliveryStageVisualizer } from '@/components/features/execution/DeliveryStageVisualizer';
 import { CompactTimeline } from '@/components/features/execution/CompactTimeline';
-import type { Step } from '@/components/features/execution/DeliveryTimeline';
-import { Package, FileCode, Box, Truck, CheckCircle } from 'lucide-react';
+
+
 import { useExecutionStream } from '@/hooks/useExecutionStream';
 import { useExecutionMetadata } from '@/hooks/useExecutions';
+import { useExecutionSteps } from '@/hooks/useExecutionSteps';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 
 export function ExecutionDetailPage() {
@@ -15,62 +16,7 @@ export function ExecutionDetailPage() {
   const { status, logs } = useExecutionStream(executionId);
   const { data: metadata, isLoading: isLoadingMetadata } = useExecutionMetadata(executionId);
 
-  // Helper to generate steps based on current status
-  const getSteps = (): Step[] => {
-    const steps: Step[] = [
-      { id: 'request', label: 'Request', icon: Package, status: 'PENDING' },
-      { id: 'fetch', label: 'Fetch Code', icon: FileCode, status: 'PENDING' },
-      { id: 'prepare', label: 'Prepare', icon: Box, status: 'PENDING' },
-      { id: 'execute', label: 'Execute', icon: Truck, status: 'PENDING' },
-      { id: 'complete', label: 'Complete', icon: CheckCircle, status: 'PENDING' },
-    ];
-
-    const statusOrder = [
-      'REQUEST_RECEIVED',
-      'CODE_FETCHING',
-      'SANDBOX_PREPARING',
-      'EXECUTING',
-      'COMPLETED'
-    ];
-
-    const currentIndex = statusOrder.indexOf(status);
-    const isFailed = status === 'FAILED';
-
-    return steps.map((step, index) => {
-      // Handle FAILED state
-      if (isFailed) {
-        // If we don't know exactly where it failed, we might assume it failed at the last active step
-        // For simplicity in this mock, if status is FAILED, we mark everything as PENDING except the one that failed? 
-        // Or better, we need to know *which* step failed. 
-        // Since ExecutionStatus 'FAILED' is generic, let's assume failure happens during execution for now or mark the last one failed.
-        // But without granular failure state, let's just mark the current active one as failed if we could track it.
-        // For now, let's just say if status is FAILED, the last step is FAILED and others are COMPLETED? 
-        // Actually, let's rely on the fact that 'FAILED' is a terminal state.
-        // If we want to show *where* it failed, we'd need more info. 
-        // Let's assume failure happens at 'execute' for this demo if status is FAILED.
-        if (index < 3) return { ...step, status: 'COMPLETED' };
-        if (index === 3) return { ...step, status: 'FAILED' };
-        return { ...step, status: 'PENDING' };
-      }
-
-      if (currentIndex === -1) return step; // Should not happen for valid statuses
-
-      // Special case for COMPLETED status: All steps including the last one should be COMPLETED
-      if (status === 'COMPLETED') {
-        return { ...step, status: 'COMPLETED' };
-      }
-
-      if (index < currentIndex) {
-        return { ...step, status: 'COMPLETED' };
-      } else if (index === currentIndex) {
-        return { ...step, status: 'RUNNING' };
-      } else {
-        return { ...step, status: 'PENDING' };
-      }
-    });
-  };
-
-  const currentSteps = getSteps();
+  const currentSteps = useExecutionSteps(status);
 
   if (isLoadingMetadata || !metadata) {
     return <LoadingScreen />;

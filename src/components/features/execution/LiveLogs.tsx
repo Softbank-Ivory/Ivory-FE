@@ -18,25 +18,25 @@ export function LiveLogs({ logs }: LiveLogsProps) {
   }, [logs, isPaused]);
 
   return (
-    <div className="flex flex-col h-full bg-[#4E342E] rounded-3xl border border-border overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-card/85 backdrop-blur-md rounded-3xl border border-border overflow-hidden shadow-sm">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-4 bg-[#3E2723] border-b border-[#5D4037]">
-        <div className="flex items-center gap-3 text-[#D7CCC8]">
+      <div className="flex items-center justify-between px-6 py-4 bg-muted/90 border-b border-border">
+        <div className="flex items-center gap-3 text-muted-foreground">
           <Terminal size={20} />
           <span className="font-bold text-sm tracking-wide">LIVE LOGS</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPaused(!isPaused)}
-            className="p-2 hover:bg-[#5D4037] rounded-xl text-[#D7CCC8] hover:text-white transition-colors"
+            className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground transition-colors"
             title={isPaused ? 'Resume' : 'Pause'}
           >
             {isPaused ? <Play size={18} /> : <Pause size={18} />}
           </button>
-          <button className="p-2 hover:bg-[#5D4037] rounded-xl text-[#D7CCC8] hover:text-white transition-colors">
+          <button className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground transition-colors">
             <Filter size={18} />
           </button>
-          <button className="p-2 hover:bg-[#5D4037] rounded-xl text-[#D7CCC8] hover:text-white transition-colors">
+          <button className="p-2 hover:bg-muted rounded-xl text-muted-foreground hover:text-foreground transition-colors">
             <Download size={18} />
           </button>
         </div>
@@ -47,13 +47,13 @@ export function LiveLogs({ logs }: LiveLogsProps) {
         {logs.map((log, index) => (
           <div
             key={index}
-            className="flex gap-4 hover:bg-[#5D4037]/50 px-3 py-1 rounded-lg transition-colors"
+            className="flex gap-4 hover:bg-muted/50 px-3 py-1 rounded-lg transition-colors"
           >
-            <span className="text-[#EFEBE9] break-all">[{log.timestamp}] {log.message}</span>
+            <span className="text-foreground break-all">[{log.timestamp}] {log.message}</span>
           </div>
         ))}
         {logs.length === 0 && (
-          <div className="text-[#A1887F] italic text-center py-12">Waiting for logs...</div>
+          <div className="text-muted-foreground italic text-center py-12">Waiting for logs...</div>
         )}
         <div ref={bottomRef} />
       </div>

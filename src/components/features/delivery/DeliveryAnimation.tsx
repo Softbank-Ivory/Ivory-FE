@@ -20,7 +20,7 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
           path = '/animations/EmptyBox.json';
           break;
         case 'CODE_FETCHING':
-          path = '/animations/LoadingCar.json';
+          path = '/animations/LoadingBoxes.json';
           break;
         case 'SANDBOX_PREPARING':
           path = '/animations/Warehouse.json';

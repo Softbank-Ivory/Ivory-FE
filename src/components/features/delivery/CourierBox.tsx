@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Package, Send, Code, Settings, FileJson, Cpu } from 'lucide-react';
 import { useRuntimes } from '@/hooks/useFunctions';
 import { motion } from 'framer-motion';
+import { RealisticPen } from '@/components/ui/RealisticPen';
 
 interface CourierBoxProps {
   onSend: (data: { runtime: string; handler: string; code: string; payload: string }) => void;
@@ -27,7 +28,7 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
   };
 
   return (
-    <div className="relative w-full max-w-4xl perspective-1000">
+    <div className="relative w-full max-w-3xl perspective-1000">
       {/* The Box */}
       <motion.div 
         initial={{ rotateX: 5 }}
@@ -138,6 +139,11 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
               </button>
             </div>
           </form>
+          
+          {/* Decorative Pen */}
+          <div className="absolute -right-24 bottom-12 transform rotate-12 pointer-events-none z-30">
+            <RealisticPen className="w-32 h-auto filter drop-shadow-2xl" />
+          </div>
         </div>
       </motion.div>
     </div>

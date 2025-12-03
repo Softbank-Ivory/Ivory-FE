@@ -1,6 +1,6 @@
 
 
-import type { FunctionDef, InvocationRequest, InvocationResponse } from '@/types/api';
+import type { FunctionDef, InvocationRequest, InvocationResponse, FunctionDetails } from '@/types/api';
 import { MOCK_FUNCTIONS } from './mock/functions';
 
 
@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 export interface FunctionService {
   getFunctions(): Promise<FunctionDef[]>;
   getFunction(name: string): Promise<FunctionDef | undefined>;
-  getFunctionDetails(id: string): Promise<unknown>; // TODO: Define proper type for details
+  getFunctionDetails(id: string): Promise<FunctionDetails>;
 
   invokeFunction(request: InvocationRequest): Promise<InvocationResponse>;
 }
@@ -25,7 +25,7 @@ const mockFunctionService: FunctionService = {
     return MOCK_FUNCTIONS.find((fn) => fn.name === name);
   },
 
-  getFunctionDetails: async (id: string) => {
+  getFunctionDetails: async (id: string): Promise<FunctionDetails> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     return {
       id,
@@ -99,8 +99,8 @@ const realFunctionService: FunctionService = {
     return response.data;
   },
 
-  getFunctionDetails: async (id: string) => {
-    const response = await api.get(`/api/functions/${id}/details`);
+  getFunctionDetails: async (id: string): Promise<FunctionDetails> => {
+    const response = await api.get<FunctionDetails>(`/api/functions/${id}/details`);
     return response.data;
   },
 

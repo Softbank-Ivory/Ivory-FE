@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { ToastProvider } from '@/context/ToastContext';
 import { HomePage } from '@/pages/HomePage';
 import { ExecutionDetailPage } from '@/pages/ExecutionDetailPage';
@@ -11,10 +11,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
-            {/* Redirect legacy routes to home for now */}
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/functions" element={<Navigate to="/" replace />} />
-            <Route path="/runners" element={<Navigate to="/" replace />} />
+
           </Routes>
         </main>
       </div>

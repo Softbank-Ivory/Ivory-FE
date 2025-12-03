@@ -52,7 +52,7 @@ export function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] flex items-center justify-center p-4 overflow-hidden relative">
+    <div className="min-h-screen bg-[#f4f1ea] flex items-center justify-center p-8 overflow-hidden relative">
       {/* Background Texture */}
       <div className="absolute inset-0 opacity-5 pointer-events-none" 
            style={{ backgroundImage: 'radial-gradient(#8b4513 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
@@ -72,7 +72,7 @@ export function HomePage() {
       <LogViewer 
         logs={logs} 
         isOpen={isLogOpen} 
-        isVisible={!!executionId}
+        isVisible={!!executionId || isDeploying}
         onToggle={() => setIsLogOpen(!isLogOpen)} 
       />
     </div>

@@ -35,12 +35,12 @@ class MockExecutionStreamService implements ExecutionStreamService {
       // 2. CODE_FETCHING
       timeouts.push(setTimeout(() => {
         if (isMounted) callbacks.onStatusChange('CODE_FETCHING');
-      }, 1000));
+      }, 3000));
 
       // 3. SANDBOX_PREPARING
       timeouts.push(setTimeout(() => {
         if (isMounted) callbacks.onStatusChange('SANDBOX_PREPARING');
-      }, 2000));
+      }, 6000));
 
       // 4. EXECUTING
       timeouts.push(setTimeout(() => {
@@ -48,12 +48,12 @@ class MockExecutionStreamService implements ExecutionStreamService {
           callbacks.onStatusChange('EXECUTING');
           addLog('함수 실행 시작');
         }
-      }, 3000));
+      }, 9000));
 
       // Logs during execution
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('테스트1 통과'); }, 3200));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('데이터베이스 연결 성공'); }, 3500));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('결과 계산 중...'); }, 4000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('테스트1 통과'); }, 10000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('데이터베이스 연결 성공'); }, 12000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('결과 계산 중...'); }, 15000));
 
       // 5. COMPLETED or FAILED
       timeouts.push(setTimeout(() => {
@@ -73,7 +73,7 @@ class MockExecutionStreamService implements ExecutionStreamService {
             addLog('Function execution failed');
           }
         }
-      }, 4500));
+      }, 20000));
     };
 
     simulate();

@@ -21,13 +21,15 @@ interface BackendRuntime {
 const realRuntimeService: RuntimeService = {
   getRuntimes: async (): Promise<Runtime[]> => {
     const response = await api.get<BackendRuntime[]>('/runtimes');
-    return response.data.map((item) => ({
-      id: item.runtime.toLowerCase().replace(/\s/g, ''), // Normalize: "Python 3.10" -> "python3.10"
-      name: item.name,
-      version: item.runtime,
-      language: item.name.toLowerCase(),
-      status: 'AVAILABLE',
-    }));
+    return response.data.map((item, index) => {
+      return {
+        id: item.runtime?.toLowerCase().replace(/\s/g, '') || `runtime-${index}`,
+        name: item.name || 'Unknown',
+        version: item.runtime || 'Unknown',
+        language: item.name?.toLowerCase() || 'unknown',
+        status: 'AVAILABLE',
+      };
+    });
   },
 };
 
