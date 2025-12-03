@@ -35,7 +35,13 @@ export function useExecutionStream(invocationId: string | undefined): UseExecuti
     const cleanup = executionStreamService.connect(invocationId, {
       onStatusChange: setStatus,
       onLog: (log: LogEntry) => {
-        setLogs((prev) => [...prev, log]);
+        setLogs((prev) => {
+          const newLogs = [...prev, log];
+          if (newLogs.length > 1000) {
+            return newLogs.slice(newLogs.length - 1000);
+          }
+          return newLogs;
+        });
       },
       onResult: setResult,
       onError: setError,

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 import { Terminal, Download, Pause, Play, Filter } from 'lucide-react';
 import type { LogEntry } from '@/types/api';
 
@@ -9,13 +10,7 @@ interface LiveLogsProps {
 export function LiveLogs({ logs }: LiveLogsProps) {
   // const { logs } = useSimulationStore();
   const [isPaused, setIsPaused] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isPaused && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [logs, isPaused]);
 
   return (
     <div className="flex flex-col h-full bg-card/85 backdrop-blur-md rounded-3xl border border-border overflow-hidden shadow-sm">
@@ -43,19 +38,22 @@ export function LiveLogs({ logs }: LiveLogsProps) {
       </div>
 
       {/* Log Content */}
-      <div className="flex-1 overflow-auto p-6 font-mono text-sm space-y-1.5">
-        {logs.map((log, index) => (
-          <div
-            key={index}
-            className="flex gap-4 hover:bg-muted/50 px-3 py-1 rounded-lg transition-colors"
-          >
-            <span className="text-foreground break-all">[{log.timestamp}] {log.message}</span>
-          </div>
-        ))}
-        {logs.length === 0 && (
+      <div className="flex-1 p-6 font-mono text-sm">
+        {logs.length === 0 ? (
           <div className="text-muted-foreground italic text-center py-12">Waiting for logs...</div>
+        ) : (
+          <Virtuoso
+            data={logs}
+            followOutput={isPaused ? false : 'auto'}
+            itemContent={(_index, log) => (
+              <div
+                className="flex gap-4 hover:bg-muted/50 px-3 py-1 rounded-lg transition-colors"
+              >
+                <span className="text-foreground break-all">[{log.timestamp}] {log.message}</span>
+              </div>
+            )}
+          />
         )}
-        <div ref={bottomRef} />
       </div>
     </div>
   );

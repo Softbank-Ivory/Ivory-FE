@@ -13,15 +13,21 @@ export interface ToastProps {
 }
 
 const icons = {
-  success: <CheckCircle className="text-green-500" size={24} />,
-  error: <XCircle className="text-red-500" size={24} />,
-  info: <Info className="text-blue-500" size={24} />,
-};
-
-const bgColors = {
-  success: 'bg-green-500/10 border-green-500/20',
-  error: 'bg-red-500/10 border-red-500/20',
-  info: 'bg-blue-500/10 border-blue-500/20',
+  success: (
+    <div className="w-12 h-12 border-4 border-green-600 rounded-full flex items-center justify-center transform -rotate-12 opacity-80">
+      <CheckCircle className="text-green-600" size={24} />
+    </div>
+  ),
+  error: (
+    <div className="w-12 h-12 border-4 border-red-600 rounded-full flex items-center justify-center transform rotate-12 opacity-80">
+      <XCircle className="text-red-600" size={24} />
+    </div>
+  ),
+  info: (
+    <div className="w-12 h-12 border-4 border-blue-600 rounded-full flex items-center justify-center transform -rotate-6 opacity-80">
+      <Info className="text-blue-600" size={24} />
+    </div>
+  ),
 };
 
 export function Toast({ id, message, type, onClose, duration = 3000 }: ToastProps) {
@@ -36,18 +42,26 @@ export function Toast({ id, message, type, onClose, duration = 3000 }: ToastProp
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 50, scale: 0.3 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      className={`flex items-center gap-4 p-4 rounded-2xl border backdrop-blur-md shadow-lg min-w-[300px] max-w-md ${bgColors[type]}`}
+      initial={{ opacity: 0, y: 50, rotate: 5 }}
+      animate={{ opacity: 1, y: 0, rotate: 0 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+      className="relative flex items-center gap-4 p-6 bg-[#fdfbf7] rounded shadow-xl min-w-[320px] max-w-md overflow-hidden"
     >
+      {/* Airmail Border Bottom */}
+      <div className="absolute bottom-0 left-0 w-full h-2" 
+           style={{ background: 'repeating-linear-gradient(45deg, #d32f2f 0, #d32f2f 10px, #ffffff 10px, #ffffff 20px, #1976d2 20px, #1976d2 30px, #ffffff 30px, #ffffff 40px)' }} 
+      />
+
       <div className="flex-shrink-0">{icons[type]}</div>
-      <p className="flex-1 text-sm font-medium text-foreground">{message}</p>
+      <div className="flex-1">
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Notification</p>
+        <p className="text-sm font-mono text-gray-800 leading-tight">{message}</p>
+      </div>
       <button
         onClick={() => onClose(id)}
-        className="p-1 hover:bg-black/5 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+        className="absolute top-2 right-2 p-1 hover:bg-black/5 rounded-full transition-colors text-gray-400 hover:text-gray-600"
       >
-        <X size={16} />
+        <X size={14} />
       </button>
     </motion.div>
   );

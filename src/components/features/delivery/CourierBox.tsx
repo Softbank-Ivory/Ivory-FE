@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Package, Send, Code, Settings, FileJson, Cpu } from 'lucide-react';
 import { useRuntimes } from '@/hooks/useFunctions';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { RealisticPen } from '@/components/ui/RealisticPen';
-
+import Editor from 'react-simple-code-editor';
+import { highlight, languages } from 'prismjs';
+import 'prismjs/components/prism-clike';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/themes/prism.css'; // Or a custom theme
 interface CourierBoxProps {
-  onSend: (data: { runtime: string; handler: string; code: string; payload: string }) => void;
+  onSend: (data: { runtime: string; handler: string; code: string; payload: string }) => Promise<void>;
+  onSuccess: () => void;
   isSending: boolean;
 }
 
-export function CourierBox({ onSend, isSending }: CourierBoxProps) {
+export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
   const { data: runtimes = [] } = useRuntimes();
   const [runtime, setRuntime] = useState('');
   const [handler, setHandler] = useState('main.handler');
@@ -22,9 +27,24 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
     }
   }, [runtimes, runtime]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [stampStatus, setStampStatus] = useState<'idle' | 'approved' | 'rejected'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSend({ runtime, handler, code, payload });
+    
+    try {
+      await onSend({ runtime, handler, code, payload });
+      setStampStatus('approved');
+      // Wait for stamp animation and user to see it
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      onSuccess();
+      // Reset stamp after transition
+      setTimeout(() => setStampStatus('idle'), 1000);
+    } catch (error) {
+      setStampStatus('rejected');
+      // Reset stamp after a delay
+      setTimeout(() => setStampStatus('idle'), 2000);
+    }
   };
 
   return (
@@ -32,18 +52,35 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
       {/* The Box */}
       <motion.div 
         initial={{ rotateX: 5 }}
-        className="relative bg-[#d2b48c] rounded-lg shadow-2xl border-t-4 border-l-4 border-[#c1a178] border-b-8 border-r-8 border-[#a1887f] p-8"
+        className="relative texture-cardboard rounded-lg shadow-2xl border-t-4 border-l-4 border-[#c1a178] border-b-8 border-r-8 border-[#a1887f] p-8"
       >
         {/* Packing Tape */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full bg-[#bcaaa4]/30 pointer-events-none z-10 backdrop-blur-[1px] border-x border-white/10" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full texture-tape pointer-events-none z-10 border-x border-white/10" />
         
         {/* Fragile Sticker */}
-        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-20">
+        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-20 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
           FRAGILE: CODE INSIDE
         </div>
 
         {/* The Label (Form) */}
-        <div className="bg-white rounded-sm shadow-sm p-8 relative z-20 max-w-3xl mx-auto transform -rotate-1">
+        <div className="texture-paper rounded-sm p-8 relative z-20 max-w-3xl mx-auto transform -rotate-1">
+          {/* Stamp Animation */}
+          <AnimatePresence>
+            {stampStatus !== 'idle' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 2, rotate: stampStatus === 'approved' ? -15 : 15 }}
+                animate={{ opacity: 0.8, scale: 1, rotate: stampStatus === 'approved' ? -15 : 15 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'spring', damping: 15, stiffness: 300 }}
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-8 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-4`}
+              >
+                <div className="text-6xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
+                  {stampStatus === 'approved' ? 'APPROVED' : 'REJECTED'}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Label Header */}
           <div className="flex justify-between items-start border-b-2 border-red-600/20 pb-4 mb-6">
             <div className="flex items-center gap-3">
@@ -99,14 +136,21 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
               <label className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                 <Code size={14} /> Package Contents (Code)
               </label>
-              <div className="relative">
-                <textarea 
+              <div className="relative border-2 border-gray-200 rounded bg-gray-50 focus-within:border-red-500 transition-colors overflow-hidden">
+                <Editor
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="w-full h-64 bg-gray-50 border-2 border-gray-200 rounded p-4 font-mono text-sm leading-relaxed focus:border-red-500 focus:outline-none transition-colors resize-none"
-                  spellCheck={false}
+                  onValueChange={code => setCode(code)}
+                  highlight={code => highlight(code, languages.js, 'js')}
+                  padding={16}
+                  className="font-mono text-sm"
+                  style={{
+                    fontFamily: '"Fira code", "Fira Mono", monospace',
+                    fontSize: 14,
+                    minHeight: '256px',
+                  }}
+                  textareaClassName="focus:outline-none"
                 />
-                <div className="absolute top-2 right-2 text-xs text-gray-300 font-mono">index.js</div>
+                <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>index.js</div>
               </div>
             </div>
 
@@ -127,7 +171,7 @@ export function CourierBox({ onSend, isSending }: CourierBoxProps) {
             <div className="pt-4 flex justify-end">
               <button 
                 type="submit" 
-                disabled={isSending}
+                disabled={isSending || stampStatus !== 'idle'}
                 className="group relative bg-red-600 text-white px-8 py-4 rounded font-bold text-lg uppercase tracking-wider shadow-lg hover:bg-red-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
               >
                 <span className="relative z-10 flex items-center gap-2">

@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import { ToastProvider } from '@/context/ToastContext';
 import { HomePage } from '@/pages/HomePage';
-import { ExecutionDetailPage } from '@/pages/ExecutionDetailPage';
+
 
 function App() {
   return (
@@ -10,7 +10,7 @@ function App() {
         <main className="h-full">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
+
 
           </Routes>
         </main>

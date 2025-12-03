@@ -35,12 +35,12 @@ class MockExecutionStreamService implements ExecutionStreamService {
       // 2. CODE_FETCHING
       timeouts.push(setTimeout(() => {
         if (isMounted) callbacks.onStatusChange('CODE_FETCHING');
-      }, 3000));
+      }, 4500));
 
       // 3. SANDBOX_PREPARING
       timeouts.push(setTimeout(() => {
         if (isMounted) callbacks.onStatusChange('SANDBOX_PREPARING');
-      }, 6000));
+      }, 8000));
 
       // 4. EXECUTING
       timeouts.push(setTimeout(() => {
@@ -48,12 +48,12 @@ class MockExecutionStreamService implements ExecutionStreamService {
           callbacks.onStatusChange('EXECUTING');
           addLog('함수 실행 시작');
         }
-      }, 9000));
+      }, 12000));
 
       // Logs during execution
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('테스트1 통과'); }, 10000));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('데이터베이스 연결 성공'); }, 12000));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('결과 계산 중...'); }, 15000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('테스트1 통과'); }, 14000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('데이터베이스 연결 성공'); }, 16000));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('결과 계산 중...'); }, 18000));
 
       // 5. COMPLETED or FAILED
       timeouts.push(setTimeout(() => {
@@ -138,10 +138,19 @@ class RealExecutionStreamService implements ExecutionStreamService {
 
     eventSource.onerror = (error) => {
       console.error('SSE Error:', error);
-      // Don't close immediately on error, let it retry or handle specific error states
-      // But if it's a fatal error (like 404), we might want to close.
-      // For now, we'll notify error and let the browser/user decide.
-      // callbacks.onError('Connection error'); 
+      // Check if the error is fatal (e.g., 401, 403, 404)
+      // EventSource error event doesn't provide status code directly, but readyState does.
+      // readyState: 0 (CONNECTING), 1 (OPEN), 2 (CLOSED)
+      
+      if (eventSource.readyState === EventSource.CLOSED) {
+         callbacks.onError('Connection closed');
+      } else {
+         // If it's still connecting/open but errored, it might be a network issue or server error.
+         // We can choose to close it if we suspect it's a permanent error.
+         // For now, let's close it to prevent infinite retries on bad requests.
+         eventSource.close();
+         callbacks.onError('Connection error');
+      }
     };
 
     return () => {
