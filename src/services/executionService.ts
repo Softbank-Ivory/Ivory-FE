@@ -1,8 +1,9 @@
 import { MOCK_EXECUTION_METADATA } from './mock/executions';
 import { api } from '@/lib/api';
+import type { ExecutionMetadata } from '@/types/api';
 
 export interface ExecutionService {
-  getExecutionMetadata(executionId: string): Promise<any>; // TODO: Define proper type
+  getExecutionMetadata(executionId: string): Promise<ExecutionMetadata>;
 }
 
 const mockExecutionService: ExecutionService = {

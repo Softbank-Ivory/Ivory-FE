@@ -2,8 +2,8 @@ import { MOCK_DASHBOARD_STATS, MOCK_RECENT_EXECUTIONS } from './mock/dashboard';
 import { api } from '@/lib/api';
 
 export interface DashboardService {
-  getStats(): Promise<any>; // TODO: Define proper type
-  getRecentExecutions(): Promise<any[]>; // TODO: Define proper type
+  getStats(): Promise<unknown>; // TODO: Define proper type
+  getRecentExecutions(): Promise<unknown[]>; // TODO: Define proper type
 }
 
 const mockDashboardService: DashboardService = {

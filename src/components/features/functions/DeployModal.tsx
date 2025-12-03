@@ -77,7 +77,7 @@ export function DeployModal({ isOpen, onClose }: DeployModalProps) {
         className="bg-card w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-3xl shadow-2xl border border-border"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30 sticky top-0 z-10 backdrop-blur-md">
+        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-card/95 sticky top-0 z-10 backdrop-blur-md">
           <h2 className="text-2xl font-extrabold text-foreground">Deploy Function</h2>
           <button onClick={onClose} className="p-2 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors">
             <X size={24} />

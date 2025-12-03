@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 export interface FunctionService {
   getFunctions(): Promise<FunctionDef[]>;
   getFunction(name: string): Promise<FunctionDef | undefined>;
-  getFunctionDetails(id: string): Promise<any>; // TODO: Define proper type for details
+  getFunctionDetails(id: string): Promise<unknown>; // TODO: Define proper type for details
 
   invokeFunction(request: InvocationRequest): Promise<InvocationResponse>;
 }
@@ -48,7 +48,7 @@ const mockFunctionService: FunctionService = {
         {
           id: 'exec-123',
           functionName: 'process-order',
-          status: 'RUNNING',
+          status: 'EXECUTING',
           startTime: '10:42:05 AM',
         },
         {

@@ -1,23 +1,20 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from '@/context/ToastContext';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { FunctionsPage } from '@/pages/FunctionsPage';
+import { HomePage } from '@/pages/HomePage';
 import { ExecutionDetailPage } from '@/pages/ExecutionDetailPage';
-import { RunnersPage } from '@/pages/RunnersPage';
-import { Sidebar } from '@/components/layout/Sidebar';
 
 function App() {
   return (
     <ToastProvider>
-      <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
-        <Sidebar />
-        <main className="flex-1 overflow-y-auto relative">
+      <div className="min-h-screen bg-background text-foreground font-sans">
+        <main className="h-full">
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/functions" element={<FunctionsPage />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/executions/:executionId" element={<ExecutionDetailPage />} />
-            <Route path="/runners" element={<RunnersPage />} />
+            {/* Redirect legacy routes to home for now */}
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/functions" element={<Navigate to="/" replace />} />
+            <Route path="/runners" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

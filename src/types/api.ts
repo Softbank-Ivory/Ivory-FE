@@ -58,10 +58,19 @@ export interface InvocationRequest {
   code: string;
   runtime: string;
   handler: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
 export interface InvocationResponse {
   invocationId: string;
   status: string;
+}
+
+export interface ExecutionMetadata {
+  id: string;
+  payload: Record<string, unknown>;
+  runnerId: string;
+  sandboxId: string;
+  region: string;
+  [key: string]: unknown; // Allow other properties
 }

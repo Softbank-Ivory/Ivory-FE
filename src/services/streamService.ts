@@ -4,7 +4,7 @@ import { api } from '@/lib/api';
 export interface StreamCallbacks {
   onStatusChange: (status: ExecutionStatus) => void;
   onLog: (log: LogEntry) => void;
-  onResult: (result: any) => void;
+  onResult: (result: unknown) => void;
   onError: (error: string) => void;
   onDuration: (duration: number) => void;
 }
@@ -46,34 +46,34 @@ class MockExecutionStreamService implements ExecutionStreamService {
       timeouts.push(setTimeout(() => {
         if (isMounted) {
           callbacks.onStatusChange('EXECUTING');
-          addLog('Function execution started');
+          addLog('함수 실행 시작');
         }
       }, 3000));
 
       // Logs during execution
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Importing modules...'); }, 3200));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Processing event payload...'); }, 3500));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Connecting to database...'); }, 4000));
-      timeouts.push(setTimeout(() => { if (isMounted) addLog('Query executed successfully.'); }, 4500));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('테스트1 통과'); }, 3200));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('데이터베이스 연결 성공'); }, 3500));
+      timeouts.push(setTimeout(() => { if (isMounted) addLog('결과 계산 중...'); }, 4000));
 
-      // 5. COMPLETED
+      // 5. COMPLETED or FAILED
       timeouts.push(setTimeout(() => {
         if (isMounted) {
-          const isSuccess = true; 
+          // Randomly succeed or fail for demo purposes, or default to success
+          const isSuccess = Math.random() > 0.3; 
           
           if (isSuccess) {
             callbacks.onStatusChange('COMPLETED');
             callbacks.onResult({ statusCode: 200, body: '{"message":"hi"}' });
-            callbacks.onDuration(2500);
+            callbacks.onDuration(480);
             addLog('Function execution completed successfully');
           } else {
             callbacks.onStatusChange('FAILED');
             callbacks.onError('NameError: x is not defined');
-            callbacks.onDuration(2500);
+            callbacks.onDuration(500);
             addLog('Function execution failed');
           }
         }
-      }, 5500));
+      }, 4500));
     };
 
     simulate();

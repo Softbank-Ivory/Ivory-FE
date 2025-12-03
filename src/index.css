@@ -3,25 +3,28 @@
 @theme {
   --font-sans: 'Nunito', sans-serif;
 
-  --color-primary: #ff9e80;
+  --color-primary: #d32f2f; /* Stamp Red */
   --color-primary-foreground: #ffffff;
 
-  --color-secondary: #ffd54f;
-  --color-secondary-foreground: #4e342e;
+  --color-secondary: #fbc02d; /* Caution Yellow */
+  --color-secondary-foreground: #3e2723;
 
-  --color-background: #fffbf0;
-  --color-foreground: #4e342e;
+  --color-background: #f4f1ea; /* Warm Paper */
+  --color-foreground: #3e2723; /* Dark Brown Text */
 
-  --color-muted: #f5e6d3;
-  --color-muted-foreground: #8d6e63;
+  --color-muted: #d7ccc8; /* Light Cardboard */
+  --color-muted-foreground: #5d4037;
 
-  --color-card: #ffffff;
-  --color-card-foreground: #4e342e;
+  --color-card: #ffffff; /* Label White */
+  --color-card-foreground: #3e2723;
 
-  --color-border: #ffccbc;
-  --color-input: #ffe0b2;
+  --color-border: #8d6e63;
+  --color-input: #efebe9;
 
-  --radius: 1rem;
+  --color-courier-box: #d2b48c; /* Cardboard */
+  --color-courier-tape: #bcaaa4; /* Packing Tape */
+
+  --radius: 0.5rem;
 }
 
 :root {
