@@ -90,13 +90,19 @@ class RealExecutionStreamService implements ExecutionStreamService {
     // Use api.defaults.baseURL to respect the configuration
     const baseURL = api.defaults.baseURL || '';
     const url = `${baseURL}/api/invocations/${invocationId}/stream`;
+    console.log('SSE Connecting to:', url);
     
     // EventSource doesn't support custom headers easily without polyfills, 
     // but standard EventSource sends 'Accept: text/event-stream'.
     // 'Cache-Control' and 'Connection' are usually handled by browser/network stack.
     const eventSource = new EventSource(url);
 
+    eventSource.onopen = () => {
+      console.log('SSE Connection Opened');
+    };
+
     eventSource.addEventListener('STATUS', (event) => {
+      console.log('SSE STATUS Event:', event.data);
       try {
         const data = JSON.parse(event.data);
         callbacks.onStatusChange(data.status);
@@ -106,6 +112,7 @@ class RealExecutionStreamService implements ExecutionStreamService {
     });
 
     eventSource.addEventListener('LOG', (event) => {
+      console.log('SSE LOG Event:', event.data);
       try {
         const data = JSON.parse(event.data);
         callbacks.onLog({
@@ -120,6 +127,7 @@ class RealExecutionStreamService implements ExecutionStreamService {
     });
 
     eventSource.addEventListener('COMPLETE', (event) => {
+      console.log('SSE COMPLETE Event:', event.data);
       try {
         const data = JSON.parse(event.data);
         callbacks.onStatusChange(data.status);
@@ -137,7 +145,8 @@ class RealExecutionStreamService implements ExecutionStreamService {
     });
 
     eventSource.onerror = (error) => {
-      console.error('SSE Error:', error);
+      console.error('SSE Error:', error, 'readyState:', eventSource.readyState);
+      console.log('SSE Error Details - URL:', url, 'State:', eventSource.readyState);
       // Check if the error is fatal (e.g., 401, 403, 404)
       // EventSource error event doesn't provide status code directly, but readyState does.
       // readyState: 0 (CONNECTING), 1 (OPEN), 2 (CLOSED)
