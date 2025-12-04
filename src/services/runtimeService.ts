@@ -20,7 +20,7 @@ interface BackendRuntime {
 
 const realRuntimeService: RuntimeService = {
   getRuntimes: async (): Promise<Runtime[]> => {
-    const response = await api.get<BackendRuntime[]>('/runtimes');
+    const response = await api.get<BackendRuntime[]>('/api/runtimes');
     return response.data.map((item, index) => {
       return {
         id: item.runtime?.toLowerCase().replace(/\s/g, '') || `runtime-${index}`,

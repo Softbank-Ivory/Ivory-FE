@@ -88,7 +88,7 @@ class MockExecutionStreamService implements ExecutionStreamService {
 class RealExecutionStreamService implements ExecutionStreamService {
   connect(invocationId: string, callbacks: StreamCallbacks): () => void {
     // Use api.defaults.baseURL to respect the configuration
-    const baseURL = api.defaults.baseURL || 'http://localhost:3000';
+    const baseURL = api.defaults.baseURL || '';
     const url = `${baseURL}/api/invocations/${invocationId}/stream`;
     
     // EventSource doesn't support custom headers easily without polyfills, 
