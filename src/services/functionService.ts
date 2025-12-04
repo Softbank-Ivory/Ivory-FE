@@ -106,6 +106,7 @@ const realFunctionService: FunctionService = {
 
   invokeFunction: async (request: InvocationRequest): Promise<InvocationResponse> => {
     const response = await api.post<InvocationResponse>('/api/invocations', request);
+    console.log('Invocation Response:', response.data);
     return response.data;
   },
 };
