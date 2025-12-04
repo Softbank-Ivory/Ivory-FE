@@ -58,7 +58,7 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full texture-tape pointer-events-none z-10 border-x border-white/10" />
         
         {/* Fragile Sticker */}
-        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-20 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
+        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
           FRAGILE: CODE INSIDE
         </div>
 
@@ -72,9 +72,9 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
                 animate={{ opacity: 0.8, scale: 1, rotate: stampStatus === 'approved' ? -15 : 15 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-8 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-4`}
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-8 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-6`}
               >
-                <div className="text-6xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
+                <div className="text-8xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
                   {stampStatus === 'approved' ? 'APPROVED' : 'REJECTED'}
                 </div>
               </motion.div>
