@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Lottie from 'lottie-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ExecutionStatus } from '@/types/api';
+import { DeliveryMap } from './DeliveryMap';
 
 interface DeliveryAnimationProps {
   status: ExecutionStatus | 'idle';
@@ -41,16 +42,30 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
         'COMPLETED'
       ];
 
-      // If we are jumping to COMPLETED, check if we skipped any steps
-      if (status === 'COMPLETED') {
+      // If we are jumping to COMPLETED or FAILED, check if we skipped any steps
+      if (status === 'COMPLETED' || status === 'FAILED') {
         const lastStatus = lastInQueue || (displayStatus !== 'idle' ? displayStatus : 'REQUEST_RECEIVED');
         const lastIndex = STATUS_ORDER.indexOf(lastStatus as ExecutionStatus);
-        const targetIndex = STATUS_ORDER.indexOf('COMPLETED');
+        
+        // For FAILED, we want to show up to EXECUTING
+        const targetStatusForGap = status === 'COMPLETED' ? 'COMPLETED' : 'EXECUTING';
+        const targetIndex = STATUS_ORDER.indexOf(targetStatusForGap);
 
-        if (lastIndex !== -1 && targetIndex !== -1 && targetIndex > lastIndex + 1) {
+        if (lastIndex !== -1 && targetIndex !== -1 && targetIndex > lastIndex) {
           // Fill the gap
-          const missingStatuses = STATUS_ORDER.slice(lastIndex + 1, targetIndex);
-          return [...prev, ...missingStatuses, 'COMPLETED'];
+          // Slice is exclusive of end, so we use targetIndex + 1 to include the targetStatusForGap
+          const missingStatuses = STATUS_ORDER.slice(lastIndex + 1, targetIndex + 1);
+          
+          // If it's FAILED, we append FAILED at the end
+          if (status === 'FAILED') {
+            return [...prev, ...missingStatuses, 'FAILED'];
+          }
+          
+          // If it's COMPLETED, the missingStatuses already includes COMPLETED (if target was COMPLETED)
+          // But wait, slice(start, end) excludes end. 
+          // If target is COMPLETED (index 4), slice(last+1, 5) includes COMPLETED.
+          // So we just return prev + missingStatuses.
+          return [...prev, ...missingStatuses];
         }
       }
 
@@ -169,6 +184,17 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
               <button onClick={onComplete} className="mt-4 text-sm font-bold underline text-gray-500 hover:text-gray-800">
                 Close
               </button>
+            </motion.div>
+          )}
+
+          {currentStatus === 'EXECUTING' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 50 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.8, x: 50 }}
+              className="absolute -right-32 bottom-0 w-64 h-64 z-50 hidden md:block"
+            >
+              <DeliveryMap />
             </motion.div>
           )}
         </div>

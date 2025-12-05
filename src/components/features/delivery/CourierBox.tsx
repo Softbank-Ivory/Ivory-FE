@@ -19,9 +19,9 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
   const { data: runtimes = [] } = useRuntimes();
   const [runtime, setRuntime] = useState('');
   const [handler, setHandler] = useState('main.handler');
-  const [code, setCode] = useState(`import time
+const [code, setCode] = useState(`import time
 
-def handler(event, context):
+def handler(event):
     print("Function started")
     time.sleep(5)
     print("Processing data...")
