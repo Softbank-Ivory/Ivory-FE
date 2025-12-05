@@ -9,58 +9,122 @@ interface DeliveryAnimationProps {
   onComplete?: () => void;
 }
 
-export function DeliveryAnimation({ status, statusMessage, onComplete }: DeliveryAnimationProps) {
+export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps) {
   const [animationData, setAnimationData] = useState<any>(null);
+  const [displayStatus, setDisplayStatus] = useState<ExecutionStatus | 'idle'>('idle');
+  const [queue, setQueue] = useState<ExecutionStatus[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
+  // Queue incoming statuses
   useEffect(() => {
-    const fetchAnimation = async () => {
-      let path = '';
-      switch (status) {
-        case 'REQUEST_RECEIVED':
-          path = '/animations/EmptyBox.json';
-          break;
-        case 'CODE_FETCHING':
-          // path = '/animations/LoadingBoxes.json';
-          path = '/animations/Warehouse&Delivery_01.json';
-          break;
-        case 'SANDBOX_PREPARING':
-          // path = '/animations/Warehouse.json';
-          path = '/animations/Warehouse&Delivery_02.json';
-          break;
-        case 'EXECUTING':
-          // path = '/animations/DeliveryTruck.json';
-          path = '/animations/Warehouse&Delivery_03.json';
-          break;
-        case 'COMPLETED':
-          // path = '/animations/Success.json';
-          path = '/animations/Warehouse&Delivery_04.json';
-          break;
-        case 'FAILED':
-          path = '/animations/Failure.json';
-          break;
-      }
+    if (status === 'idle') {
+      setDisplayStatus('idle');
+      setQueue([]);
+      setIsProcessing(false);
+      return;
+    }
 
-      if (path) {
-        try {
-          const response = await fetch(path);
-          const data = await response.json();
-          setAnimationData(data);
-        } catch (error) {
-          console.error('Failed to load animation:', error);
+    setQueue(prev => {
+      // Avoid adding duplicates if it's the same as the last item in queue
+      const lastInQueue = prev[prev.length - 1];
+      if (lastInQueue === status) return prev;
+      
+      // Also avoid if it's the currently displayed status and queue is empty
+      if (prev.length === 0 && displayStatus === status) return prev;
+
+      // Gap filling logic
+      const STATUS_ORDER: ExecutionStatus[] = [
+        'REQUEST_RECEIVED',
+        'CODE_FETCHING',
+        'SANDBOX_PREPARING',
+        'EXECUTING',
+        'COMPLETED'
+      ];
+
+      // If we are jumping to COMPLETED, check if we skipped any steps
+      if (status === 'COMPLETED') {
+        const lastStatus = lastInQueue || (displayStatus !== 'idle' ? displayStatus : 'REQUEST_RECEIVED');
+        const lastIndex = STATUS_ORDER.indexOf(lastStatus as ExecutionStatus);
+        const targetIndex = STATUS_ORDER.indexOf('COMPLETED');
+
+        if (lastIndex !== -1 && targetIndex !== -1 && targetIndex > lastIndex + 1) {
+          // Fill the gap
+          const missingStatuses = STATUS_ORDER.slice(lastIndex + 1, targetIndex);
+          return [...prev, ...missingStatuses, 'COMPLETED'];
         }
       }
+
+      return [...prev, status];
+    });
+  }, [status, displayStatus]);
+
+  // Process queue
+  useEffect(() => {
+    if (isProcessing || queue.length === 0) return;
+
+    const processNext = async () => {
+      setIsProcessing(true);
+      const nextStatus = queue[0];
+      
+      setDisplayStatus(nextStatus);
+      
+      // Load animation for the new status
+      await loadAndSetAnimation(nextStatus);
+
+      // Minimum duration for the status
+      // We remove the item from queue AFTER the duration
+      await new Promise(resolve => setTimeout(resolve, 4000));
+
+      setQueue(prev => prev.slice(1));
+      setIsProcessing(false);
     };
 
-    fetchAnimation();
-  }, [status]);
+    processNext();
+  }, [queue, isProcessing]);
 
-  if (status === 'idle') return null;
+  const loadAndSetAnimation = async (currentStatus: ExecutionStatus | 'idle') => {
+    let path = '';
+    switch (currentStatus) {
+      case 'REQUEST_RECEIVED':
+        path = '/animations/EmptyBox.json';
+        break;
+      case 'CODE_FETCHING':
+        path = '/animations/Warehouse&Delivery_01.json';
+        break;
+      case 'SANDBOX_PREPARING':
+        path = '/animations/Warehouse&Delivery_02.json';
+        break;
+      case 'EXECUTING':
+        path = '/animations/Warehouse&Delivery_03.json';
+        break;
+      case 'COMPLETED':
+        path = '/animations/Warehouse&Delivery_04.json';
+        break;
+      case 'FAILED':
+        path = '/animations/Failure.json';
+        break;
+    }
 
-  const isDelivering = ['REQUEST_RECEIVED', 'CODE_FETCHING', 'SANDBOX_PREPARING', 'EXECUTING'].includes(status);
+    if (path) {
+      try {
+        const response = await fetch(path);
+        const data = await response.json();
+        setAnimationData(data);
+      } catch (error) {
+        console.error('Failed to load animation:', error);
+      }
+    }
+  };
+
+  if (displayStatus === 'idle' && status === 'idle') return null;
+
+  // Use displayStatus for rendering instead of prop status
+  const currentStatus = displayStatus === 'idle' ? status : displayStatus;
+  const isDelivering = ['REQUEST_RECEIVED', 'CODE_FETCHING', 'SANDBOX_PREPARING', 'EXECUTING'].includes(currentStatus);
 
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -68,19 +132,21 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
       >
         <div className="w-full max-w-lg aspect-square relative flex flex-col items-center justify-center">
           {animationData && <Lottie animationData={animationData} loop={isDelivering} />}
-
+          
           {isDelivering && (
-            <motion.h2
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
+            <motion.h2 
+              key={currentStatus} // Re-animate on status change
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
               className="text-2xl font-black text-[#5d4037] mt-8 uppercase tracking-widest absolute bottom-10"
             >
-              {statusMessage || 'Package In Transit...'}
+              {currentStatus.replace(/_/g, ' ')}
             </motion.h2>
           )}
 
-          {status === 'COMPLETED' && (
-            <motion.div
+          {currentStatus === 'COMPLETED' && (
+            <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="absolute bottom-10 flex flex-col items-center"
@@ -92,8 +158,8 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
             </motion.div>
           )}
 
-          {status === 'FAILED' && (
-            <motion.div
+          {currentStatus === 'FAILED' && (
+            <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="absolute bottom-10 flex flex-col items-center"
