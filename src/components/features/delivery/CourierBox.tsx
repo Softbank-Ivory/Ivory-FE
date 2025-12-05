@@ -7,6 +7,7 @@ import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-python';
 import 'prismjs/themes/prism.css'; // Or a custom theme
 interface CourierBoxProps {
   onSend: (data: { runtime: string; handler: string; code: string; payload: string }) => Promise<void>;
@@ -18,12 +19,21 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
   const { data: runtimes = [] } = useRuntimes();
   const [runtime, setRuntime] = useState('');
   const [handler, setHandler] = useState('main.handler');
-  const [code, setCode] = useState('export const handler = async (event) => {\n  console.log("Hello from Ivory Express!");\n  return { message: "Package Delivered!" };\n};');
-  const [payload, setPayload] = useState('{\n  "key": "value"\n}');
+  const [code, setCode] = useState(`import time
+
+def handler(event, context):
+    print("Function started")
+    time.sleep(5)
+    print("Processing data...")
+    time.sleep(5)
+    return {"statusCode": 200, "body": "Hello from Ivory Express!"}`);
+  const [payload, setPayload] = useState('{}');
 
   useEffect(() => {
     if (runtimes.length > 0 && !runtime) {
-      setRuntime(runtimes[0].id);
+      // Try to find a python runtime first
+      const pythonRuntime = runtimes.find(r => r.id.includes('python'));
+      setRuntime(pythonRuntime ? pythonRuntime.id : runtimes[0].id);
     }
   }, [runtimes, runtime]);
 
@@ -140,7 +150,7 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
                 <Editor
                   value={code}
                   onValueChange={code => setCode(code)}
-                  highlight={code => highlight(code, languages.js, 'js')}
+                  highlight={code => highlight(code, languages.python, 'python')}
                   padding={16}
                   className="font-mono text-sm"
                   style={{
@@ -150,7 +160,7 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
                   }}
                   textareaClassName="focus:outline-none"
                 />
-                <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>index.js</div>
+                <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>main.py</div>
               </div>
             </div>
 
