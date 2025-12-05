@@ -1,13 +1,29 @@
-import type { ExecutionStatus, LogEntry } from '@/types/api';
+import type { ExecutionStatus, LogEntry, ExecutionError } from '@/types/api';
 import { api } from '@/lib/api';
 
 export interface StreamCallbacks {
   onStatusChange: (status: ExecutionStatus) => void;
   onLog: (log: LogEntry) => void;
   onResult: (result: unknown) => void;
-  onError: (error: string) => void;
+  onError: (error: ExecutionError | string) => void;
   onDuration: (duration: number) => void;
 }
+
+/**
+ * 로그 메시지 내용을 분석하여 로그 레벨을 추론합니다.
+ */
+const determineLogLevel = (message: string): 'INFO' | 'WARN' | 'ERROR' => {
+  const lowerMessage = message.toLowerCase();
+  if (lowerMessage.includes('error') || lowerMessage.includes('exception') || 
+      lowerMessage.includes('traceback') || lowerMessage.includes('failed')) {
+    return 'ERROR';
+  }
+  if (lowerMessage.includes('warning') || lowerMessage.includes('warn') || 
+      lowerMessage.includes('deprecated')) {
+    return 'WARN';
+  }
+  return 'INFO';
+};
 
 export interface ExecutionStreamService {
   connect(invocationId: string, callbacks: StreamCallbacks): () => void;
@@ -68,7 +84,10 @@ class MockExecutionStreamService implements ExecutionStreamService {
             addLog('Function execution completed successfully');
           } else {
             callbacks.onStatusChange('FAILED');
-            callbacks.onError('NameError: x is not defined');
+            callbacks.onError({
+              type: 'RUNTIME_ERROR',
+              message: 'NameError: x is not defined'
+            });
             callbacks.onDuration(500);
             addLog('Function execution failed');
           }
@@ -86,85 +105,158 @@ class MockExecutionStreamService implements ExecutionStreamService {
 }
 
 class RealExecutionStreamService implements ExecutionStreamService {
+  private static readonly MAX_RETRIES = 3;
+  private static readonly TIMEOUT_MS = 300000; // 5 minutes
+
   connect(invocationId: string, callbacks: StreamCallbacks): () => void {
-    // Use api.defaults.baseURL to respect the configuration
     const baseURL = api.defaults.baseURL || '';
     const url = `${baseURL}/api/invocations/${invocationId}/stream`;
-    console.log('SSE Connecting to:', url);
     
-    // EventSource doesn't support custom headers easily without polyfills, 
-    // but standard EventSource sends 'Accept: text/event-stream'.
-    // 'Cache-Control' and 'Connection' are usually handled by browser/network stack.
-    const eventSource = new EventSource(url);
+    let retryCount = 0;
+    let eventSource: EventSource | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isCleanedUp = false;
 
-    eventSource.onopen = () => {
-      console.log('SSE Connection Opened');
-    };
-
-    eventSource.addEventListener('STATUS', (event) => {
-      console.log('SSE STATUS Event:', event.data);
-      try {
-        const data = JSON.parse(event.data);
-        callbacks.onStatusChange(data.status);
-      } catch (e) {
-        console.error('Failed to parse STATUS event', e);
+    const cleanup = () => {
+      isCleanedUp = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
       }
-    });
-
-    eventSource.addEventListener('LOG', (event) => {
-      console.log('SSE LOG Event:', event.data);
-      try {
-        const data = JSON.parse(event.data);
-        callbacks.onLog({
-          id: Date.now().toString(), // Generate ID as it might not be in the event
-          timestamp: new Date().toISOString(),
-          level: 'INFO',
-          message: data.line
-        });
-      } catch (e) {
-        console.error('Failed to parse LOG event', e);
-      }
-    });
-
-    eventSource.addEventListener('COMPLETE', (event) => {
-      console.log('SSE COMPLETE Event:', event.data);
-      try {
-        const data = JSON.parse(event.data);
-        callbacks.onStatusChange(data.status);
-        callbacks.onDuration(data.durationMs);
-
-        if (data.status === 'COMPLETED') {
-          callbacks.onResult(data.result);
-        } else if (data.status === 'FAILED') {
-          callbacks.onError(data.errorMessage);
-        }
+      if (eventSource) {
         eventSource.close();
-      } catch (e) {
-        console.error('Failed to parse COMPLETE event', e);
+        eventSource = null;
       }
-    });
+    };
 
-    eventSource.onerror = (error) => {
-      console.error('SSE Error:', error, 'readyState:', eventSource.readyState);
-      console.log('SSE Error Details - URL:', url, 'State:', eventSource.readyState);
-      // Check if the error is fatal (e.g., 401, 403, 404)
-      // EventSource error event doesn't provide status code directly, but readyState does.
-      // readyState: 0 (CONNECTING), 1 (OPEN), 2 (CLOSED)
+    const connect = () => {
+      if (isCleanedUp) return;
+
+      console.log('SSE Connecting to:', url, `(Attempt ${retryCount + 1}/${RealExecutionStreamService.MAX_RETRIES + 1})`);
       
-      if (eventSource.readyState === EventSource.CLOSED) {
-         callbacks.onError('Connection closed');
-      } else {
-         // If it's still connecting/open but errored, it might be a network issue or server error.
-         // We can choose to close it if we suspect it's a permanent error.
-         // For now, let's close it to prevent infinite retries on bad requests.
-         eventSource.close();
-         callbacks.onError('Connection error');
-      }
+      eventSource = new EventSource(url);
+
+      // 타임아웃 설정
+      timeoutId = setTimeout(() => {
+        if (!isCleanedUp && eventSource) {
+          console.warn('SSE Connection timeout');
+          eventSource.close();
+          callbacks.onError({
+            type: 'TIMEOUT',
+            message: 'Connection timeout after 5 minutes'
+          });
+          cleanup();
+        }
+      }, RealExecutionStreamService.TIMEOUT_MS);
+
+      eventSource.onopen = () => {
+        console.log('SSE Connection Opened');
+        retryCount = 0; // 연결 성공 시 재시도 카운터 리셋
+      };
+
+      eventSource.addEventListener('STATUS', (event) => {
+        console.log('SSE STATUS Event:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          callbacks.onStatusChange(data.status);
+        } catch (e) {
+          console.error('Failed to parse STATUS event', e);
+        }
+      });
+
+      eventSource.addEventListener('LOG', (event) => {
+        console.log('SSE LOG Event:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          const message = data.line || '';
+          callbacks.onLog({
+            id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
+            timestamp: new Date().toISOString(),
+            level: determineLogLevel(message),
+            message
+          });
+        } catch (e) {
+          console.error('Failed to parse LOG event', e);
+        }
+      });
+
+      eventSource.addEventListener('COMPLETE', (event) => {
+        console.log('SSE COMPLETE Event:', event.data);
+        try {
+          const data = JSON.parse(event.data);
+          callbacks.onStatusChange(data.status);
+          callbacks.onDuration(data.durationMs);
+
+          if (data.status === 'COMPLETED') {
+            callbacks.onResult(data.result);
+          } else if (data.status === 'FAILED') {
+            // errorType과 errorMessage 모두 처리
+            const error: ExecutionError = {
+              type: data.errorType || 'UNKNOWN',
+              message: data.errorMessage || 'Unknown error occurred'
+            };
+            callbacks.onError(error);
+          }
+          
+          // 타임아웃 클리어
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          
+          eventSource?.close();
+        } catch (e) {
+          console.error('Failed to parse COMPLETE event', e);
+        }
+      });
+
+      eventSource.onerror = (error) => {
+        console.error('SSE Error:', error, 'readyState:', eventSource?.readyState);
+        
+        if (isCleanedUp) return;
+
+        // EventSource의 readyState: 0 (CONNECTING), 1 (OPEN), 2 (CLOSED)
+        if (eventSource?.readyState === EventSource.CLOSED) {
+          // 연결이 닫혔을 때 재시도
+          if (retryCount < RealExecutionStreamService.MAX_RETRIES) {
+            retryCount++;
+            const retryDelay = 1000 * retryCount; // Exponential backoff
+            console.log(`SSE Connection closed. Retrying in ${retryDelay}ms...`);
+            
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
+            
+            setTimeout(() => {
+              if (!isCleanedUp) {
+                connect();
+              }
+            }, retryDelay);
+          } else {
+            // 최대 재시도 횟수 초과
+            console.error('SSE Connection failed after maximum retries');
+            callbacks.onError({
+              type: 'CONNECTION_ERROR',
+              message: 'Connection failed after multiple retries'
+            });
+            cleanup();
+          }
+        } else {
+          // 연결 중이거나 열려있을 때 에러 발생
+          // EventSource는 자동 재연결을 시도하지만, 명시적으로 처리
+          eventSource?.close();
+          callbacks.onError({
+            type: 'CONNECTION_ERROR',
+            message: 'Connection error occurred'
+          });
+        }
+      };
     };
 
-    return () => {
-      eventSource.close();
-    };
+    connect();
+
+    return cleanup;
   }
 }
 

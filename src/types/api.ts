@@ -29,12 +29,18 @@ export interface Execution {
     body: string;
   };
   errorMessage?: string;
+  errorType?: string;
 }
 
 export interface LogEntry {
   id: string;
   timestamp: string;
   level: 'INFO' | 'WARN' | 'ERROR';
+  message: string;
+}
+
+export interface ExecutionError {
+  type: string;
   message: string;
 }
 
