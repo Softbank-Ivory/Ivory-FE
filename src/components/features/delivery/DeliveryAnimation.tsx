@@ -20,16 +20,20 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
           path = '/animations/EmptyBox.json';
           break;
         case 'CODE_FETCHING':
-          path = '/animations/LoadingBoxes.json';
+          // path = '/animations/LoadingBoxes.json';
+          path = '/animations/Warehouse&Delivery_01.json';
           break;
         case 'SANDBOX_PREPARING':
-          path = '/animations/Warehouse.json';
+          // path = '/animations/Warehouse.json';
+          path = '/animations/Warehouse&Delivery_02.json';
           break;
         case 'EXECUTING':
-          path = '/animations/DeliveryTruck.json';
+          // path = '/animations/DeliveryTruck.json';
+          path = '/animations/Warehouse&Delivery_03.json';
           break;
         case 'COMPLETED':
-          path = '/animations/Success.json';
+          // path = '/animations/Success.json';
+          path = '/animations/Warehouse&Delivery_04.json';
           break;
         case 'FAILED':
           path = '/animations/Failure.json';
@@ -56,7 +60,7 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
 
   return (
     <AnimatePresence>
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -64,9 +68,9 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
       >
         <div className="w-full max-w-lg aspect-square relative flex flex-col items-center justify-center">
           {animationData && <Lottie animationData={animationData} loop={isDelivering} />}
-          
+
           {isDelivering && (
-            <motion.h2 
+            <motion.h2
               animate={{ opacity: [0.5, 1, 0.5] }}
               transition={{ repeat: Infinity, duration: 1.5 }}
               className="text-2xl font-black text-[#5d4037] mt-8 uppercase tracking-widest absolute bottom-10"
@@ -76,7 +80,7 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
           )}
 
           {status === 'COMPLETED' && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="absolute bottom-10 flex flex-col items-center"
@@ -89,7 +93,7 @@ export function DeliveryAnimation({ status, statusMessage, onComplete }: Deliver
           )}
 
           {status === 'FAILED' && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="absolute bottom-10 flex flex-col items-center"
