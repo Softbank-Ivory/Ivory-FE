@@ -4,13 +4,14 @@ import { DeliveryAnimation } from '@/components/features/delivery/DeliveryAnimat
 import { LogViewer } from '@/components/features/delivery/LogViewer';
 import { useToast } from '@/contexts/ToastContext';
 import { useExecutionContext } from '@/contexts/ExecutionContext';
-import { useRunnerMetrics } from '@/hooks/useRunnerMetrics';
+// import { useRunnerMetrics } from '@/hooks/useRunnerMetrics'; // Hook is now used inside ResourceMonitor
+import { ResourceMonitor } from '@/components/features/runner/ResourceMonitor';
 import { checkRateLimit } from '@/lib/rateLimiter';
 // import { Plus, X } from 'lucide-react';
 // import { motion, AnimatePresence } from 'framer-motion';
 
 export function HomePage() {
-  useRunnerMetrics();
+  // useRunnerMetrics(); // Moved to ResourceMonitor
   const { startExecution, executions } = useExecutionContext();
   const { error: toastError } = useToast();
   // const [isCourierOpen, setIsCourierOpen] = useState(false); // Removed for split screen
@@ -82,7 +83,7 @@ export function HomePage() {
       {/* RIGHT: Full Map View */}
       <div className="flex-1 h-full relative bg-[#f0f0f0]">
         <DeliveryAnimation />
-
+        <ResourceMonitor />
         <LogViewer
           executions={executions}
           isOpen={isLogOpen}

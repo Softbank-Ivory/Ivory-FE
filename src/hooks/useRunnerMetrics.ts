@@ -1,11 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface RunnerMetrics {
-  cpu: number;
+  cpu: number | null;
   memory: number;
 }
 
-export function useRunnerMetrics() {
+interface UseRunnerMetricsReturn {
+    metrics: RunnerMetrics | null;
+    isConnected: boolean;
+}
+
+export function useRunnerMetrics(): UseRunnerMetricsReturn {
+  const [metrics, setMetrics] = useState<RunnerMetrics | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
   useEffect(() => {
     const url = '/api/runner/metrics/stream';
     console.log('Connecting to Runner Metrics SSE:', url);
@@ -14,12 +22,14 @@ export function useRunnerMetrics() {
 
     eventSource.onopen = () => {
       console.log('Runner Metrics SSE Connected');
+      setIsConnected(true);
     };
 
     eventSource.addEventListener('METRICS', (event) => {
       try {
         const data: RunnerMetrics = JSON.parse(event.data);
-        console.log('Runner Metrics:', data);
+        // console.log('Runner Metrics:', data);
+        setMetrics(data);
       } catch (error) {
         console.error('Failed to parse Runner Metrics event:', error);
       }
@@ -27,6 +37,7 @@ export function useRunnerMetrics() {
 
     eventSource.onerror = (error) => {
       console.error('Runner Metrics SSE Error:', error);
+      setIsConnected(false);
       // Do not close explicitly, let EventSource retry connection
       // eventSource.close(); 
     };
@@ -34,6 +45,9 @@ export function useRunnerMetrics() {
     return () => {
       console.log('Closing Runner Metrics SSE');
       eventSource.close();
+      setIsConnected(false);
     };
   }, []);
+
+  return { metrics, isConnected };
 }
