@@ -28,7 +28,7 @@ export function useRunnerMetrics(): UseRunnerMetricsReturn {
     eventSource.addEventListener('METRICS', (event) => {
       try {
         const data: RunnerMetrics = JSON.parse(event.data);
-        // console.log('Runner Metrics:', data);
+        console.log('Runner Metrics:', data);
         setMetrics(data);
       } catch (error) {
         console.error('Failed to parse Runner Metrics event:', error);

@@ -25,7 +25,7 @@ export function Gauge({ value, label }: GaugeProps) {
   
   // SVG Arc calculations
   const radius = 40;
-  const strokeWidth = 8;
+  const strokeWidth = 10; // Slightly thicker
   // const center = 50; // Unused
   // Circumference of a semi-circle is PI * r
   const circumference = Math.PI * radius;
@@ -33,8 +33,8 @@ export function Gauge({ value, label }: GaugeProps) {
   const strokeDashoffset = circumference * (1 - clampedValue / 100);
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-24 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-3">
-      <div className="relative w-full h-16 flex items-center justify-center overflow-hidden">
+    <div className="flex flex-col items-center justify-center w-full h-36 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-100 p-4">
+      <div className="relative w-full h-24 flex items-center justify-center overflow-hidden">
         <svg
           viewBox="0 0 100 55" // Slightly taller than 50 to accommodate stroke cap
           className="h-full transform"
@@ -62,14 +62,14 @@ export function Gauge({ value, label }: GaugeProps) {
         </svg>
         
         {/* Value Text */}
-        <div className="absolute bottom-0 text-center">
-            <span className={`text-xl font-bold transition-colors duration-300`} style={{ color }}>
+        <div className="absolute bottom-0 text-center translate-y-1">
+            <span className={`text-3xl font-extrabold transition-colors duration-300`} style={{ color }}>
                 {isValid ? Math.round(clampedValue) : '??'}
             </span>
-            <span className="text-sm text-gray-400 font-medium ml-0.5">%</span>
+            <span className="text-lg text-gray-400 font-bold ml-0.5">%</span>
         </div>
       </div>
-      <div className="text-xs font-bold text-gray-600 mt-0 uppercase tracking-wider">
+      <div className="text-sm font-bold text-gray-600 mt-2 uppercase tracking-wider">
         {label}
       </div>
     </div>

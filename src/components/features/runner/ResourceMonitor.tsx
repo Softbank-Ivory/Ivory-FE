@@ -18,11 +18,11 @@ export function ResourceMonitor() {
       >
         <Gauge 
             value={metrics?.cpu}
-            label="Traffic" // Metaphor for CPU
+            label="CPU"
         />
         <Gauge 
             value={metrics?.memory}
-            label="Cargo" // Metaphor for Memory
+            label="Memory"
         />
       </motion.div>
     </AnimatePresence>
