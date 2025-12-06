@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { DeliveryMap } from './DeliveryMap';
 import { MapAgent } from './MapAgent';
 import { StatusBubble } from './StatusBubble';
-import { LogViewer } from './LogViewer';
 import { ExecutionResultModal } from './ExecutionResultModal';
 import { useExecutionContext, type ActiveExecution } from '@/contexts/ExecutionContext';
 import { ROUTE_PATH, POI_COORDINATES } from './constants';
@@ -10,7 +9,6 @@ import { getColorFromId } from '@/utils/color';
 
 export function DeliveryAnimation() {
   const { executions, removeExecution } = useExecutionContext();
-  const [showLogs, setShowLogs] = useState(false);
   const [selectedResult, setSelectedResult] = useState<ActiveExecution | null>(null);
 
   return (
@@ -100,14 +98,6 @@ export function DeliveryAnimation() {
           />
         </div>
       </div>
-
-      {/* Log Viewer Modal (Absolute Positioned in this Right Panel) */}
-      <LogViewer
-        executions={executions}
-        isOpen={showLogs}
-        isVisible={true}
-        onToggle={() => setShowLogs(!showLogs)}
-      />
     </div>
   );
 }
