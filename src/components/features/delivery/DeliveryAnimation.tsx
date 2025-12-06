@@ -47,6 +47,8 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
 
       // If we are jumping to COMPLETED or FAILED, check if we skipped any steps
       if (status === 'COMPLETED' || status === 'FAILED') {
+        // If we have items in queue, the last item is our reference for "current state" in terms of progression
+        // If queue is empty, we use displayStatus
         const lastStatus = lastInQueue || (displayStatus !== 'idle' ? displayStatus : 'REQUEST_RECEIVED');
         const lastIndex = STATUS_ORDER.indexOf(lastStatus as ExecutionStatus);
         
@@ -64,10 +66,6 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
             return [...prev, ...missingStatuses, 'FAILED'];
           }
           
-          // If it's COMPLETED, the missingStatuses already includes COMPLETED (if target was COMPLETED)
-          // But wait, slice(start, end) excludes end. 
-          // If target is COMPLETED (index 4), slice(last+1, 5) includes COMPLETED.
-          // So we just return prev + missingStatuses.
           return [...prev, ...missingStatuses];
         }
       }
@@ -146,62 +144,97 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-[#f4f1ea] flex flex-col items-center justify-center"
+        className="fixed inset-0 z-50 bg-[#e0ded6] flex flex-col items-center justify-center p-8"
       >
-        <div className="w-full max-w-lg aspect-square relative flex flex-col items-center justify-center">
-          {animationData && (
-            <Suspense fallback={<Loader2 className="animate-spin text-gray-400" size={48} />}>
-              <Lottie animationData={animationData} loop={isDelivering} />
-            </Suspense>
-          )}
+        {/* Tablet Frame */}
+        <div className="relative w-full max-w-3xl aspect-[17/10] bg-black rounded-[0.5rem] shadow-2xl p-3 md:p-4 border-4 border-[#2a2a2a] ring-1 ring-gray-700">
           
-          {isDelivering && (
-            <motion.h2 
-              key={currentStatus} // Re-animate on status change
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-2xl font-black text-[#5d4037] mt-8 uppercase tracking-widest absolute bottom-10"
+          {/* Camera Dot */}
+          <div className="absolute top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#1a1a1a] ring-1 ring-[#333]" />
+
+          {/* Screen Area */}
+          <div className="w-full h-full bg-[#f4f1ea] overflow-hidden relative isolate">
+            
+            {/* Main Animation Area - Fills the screen */}
+            <div className="absolute inset-0 w-full h-full flex items-center justify-center">
+              {animationData && (
+                <Suspense fallback={<Loader2 className="animate-spin text-gray-400" size={48} />}>
+                  <Lottie 
+                    animationData={animationData} 
+                    loop={isDelivering} 
+                    className="w-full h-full object-cover"
+                    style={{ width: '100%', height: '100%' }} // Force full size
+                  />
+                </Suspense>
+              )}
+            </div>
+          </div>
+
+          {/* Map Overlay (Outside Tablet, Overlapping) */}
+          {currentStatus === 'EXECUTING' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 50, y: 50 }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, x: 50, y: 50 }}
+              className="absolute -right-16 -bottom-16 w-48 h-48 md:w-64 md:h-64 z-50 shadow-2xl rounded-2xl overflow-hidden border-4 border-white transform rotate-3 hover:scale-105 transition-transform duration-300"
             >
-              {currentStatus.replace(/_/g, ' ')}
-            </motion.h2>
+              <DeliveryMap />
+            </motion.div>
+          )}
+        </div>
+
+        {/* External Status Display */}
+        <div className="mt-8 flex flex-col items-center space-y-4">
+          
+          {/* Active Status Text */}
+          {isDelivering && (
+            <motion.div
+              layout
+              key={currentStatus} 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="px-6 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm border border-stone-200"
+            >
+              <h2 className="text-xl font-black text-[#5d4037] uppercase tracking-widest flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                {currentStatus.replace(/_/g, ' ')}
+              </h2>
+            </motion.div>
           )}
 
+          {/* Completion UI */}
           {currentStatus === 'COMPLETED' && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-10 flex flex-col items-center"
+              className="flex flex-col items-center"
             >
-              <h2 className="text-4xl font-black text-green-700 uppercase tracking-tighter">Delivered!</h2>
-              <button onClick={onComplete} className="mt-4 text-sm font-bold underline text-gray-500 hover:text-gray-800">
+              <h2 className="text-5xl font-black text-green-700 uppercase tracking-tighter drop-shadow-sm">Delivered!</h2>
+              <button 
+                onClick={onComplete} 
+                className="mt-6 px-8 py-3 bg-[#5d4037] text-[#f4f1ea] rounded-full font-bold text-lg shadow-lg hover:bg-[#4a332a] transition-all active:scale-95"
+              >
                 Close
               </button>
             </motion.div>
           )}
 
+          {/* Failure UI */}
           {currentStatus === 'FAILED' && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute bottom-10 flex flex-col items-center"
+              className="flex flex-col items-center"
             >
-              <h2 className="text-4xl font-black text-red-700 uppercase tracking-tighter">Return to Sender</h2>
-              <p className="mt-2 font-bold text-[#5d4037]">Delivery Failed</p>
-              <button onClick={onComplete} className="mt-4 text-sm font-bold underline text-gray-500 hover:text-gray-800">
+              <h2 className="text-5xl font-black text-red-700 uppercase tracking-tighter drop-shadow-sm">Return to Sender</h2>
+              <p className="mt-2 text-xl font-bold text-[#5d4037]/80">Delivery Failed</p>
+              <button 
+                onClick={onComplete} 
+                className="mt-6 px-8 py-3 bg-[#5d4037] text-[#f4f1ea] rounded-full font-bold text-lg shadow-lg hover:bg-[#4a332a] transition-all active:scale-95"
+              >
                 Close
               </button>
-            </motion.div>
-          )}
-
-          {currentStatus === 'EXECUTING' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, x: 50 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.8, x: 50 }}
-              className="absolute -right-32 bottom-0 w-64 h-64 z-50 hidden md:block"
-            >
-              <DeliveryMap />
             </motion.div>
           )}
         </div>
