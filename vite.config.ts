@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: target,
           changeOrigin: true,
+          timeout: 0,
+          proxyTimeout: 0,
         },
         '/runtimes': {
           target: target,
