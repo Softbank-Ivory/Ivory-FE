@@ -3,6 +3,7 @@ import { CourierBox } from '@/components/features/delivery/CourierBox';
 import { DeliveryAnimation } from '@/components/features/delivery/DeliveryAnimation';
 import { useToast } from '@/contexts/ToastContext';
 import { useExecutionContext } from '@/contexts/ExecutionContext';
+import { checkRateLimit } from '@/lib/rateLimiter';
 // import { Plus, X } from 'lucide-react';
 // import { motion, AnimatePresence } from 'framer-motion';
 

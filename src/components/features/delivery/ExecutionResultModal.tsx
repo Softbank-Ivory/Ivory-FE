@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, AlertCircle, Terminal, FileJson, Clock, Stamp } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Terminal, FileJson, Clock } from 'lucide-react';
 import type { ActiveExecution } from '@/contexts/ExecutionContext';
 import Editor from 'react-simple-code-editor';
 import { highlight, languages } from 'prismjs';
