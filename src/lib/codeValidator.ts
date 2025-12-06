@@ -171,6 +171,11 @@ export function validatePython(code: string): ValidationResult {
   //   // 들여쓰기 검사 로직...
   // });
 
+  // 정적 분석: 무한 루프 및 데드락 탐지
+  const infiniteLoopErrors = detectInfiniteLoops(code, 'python');
+  const deadlockErrors = detectDeadlocks(code, 'python');
+  errors.push(...infiniteLoopErrors, ...deadlockErrors);
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -267,6 +272,11 @@ export function validateJavaScript(code: string): ValidationResult {
       // 경고는 표시하지 않음 (선택적이므로)
     }
   });
+
+  // 정적 분석: 무한 루프 및 데드락 탐지
+  const infiniteLoopErrors = detectInfiniteLoops(code, 'javascript');
+  const deadlockErrors = detectDeadlocks(code, 'javascript');
+  errors.push(...infiniteLoopErrors, ...deadlockErrors);
 
   return {
     isValid: errors.length === 0,
@@ -370,10 +380,310 @@ export function validateJava(code: string): ValidationResult {
     }
   });
 
+  // 정적 분석: 무한 루프 및 데드락 탐지
+  const infiniteLoopErrors = detectInfiniteLoops(code, 'java');
+  const deadlockErrors = detectDeadlocks(code, 'java');
+  errors.push(...infiniteLoopErrors, ...deadlockErrors);
+
   return {
     isValid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * 무한 루프 패턴 탐지 (정적 분석)
+ * 명시적 무한 루프와 의심스러운 루프 패턴을 감지
+ */
+function detectInfiniteLoops(code: string, language: string): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const lines = code.split('\n');
+
+  lines.forEach((line, index) => {
+    const lineNum = index + 1;
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) {
+      return;
+    }
+
+    // 명시적 무한 루프 패턴 감지
+    if (language === 'python') {
+      // Python: while True, while 1, for _ in iter(int, 1)
+      if (/^\s*while\s+(True|1|1\s*==\s*1)\s*:/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('while') + 1,
+          message: 'Potential infinite loop detected: while True/1. Consider adding a break condition or timeout.',
+          severity: 'warning',
+        });
+      }
+      // for 루프에서 무한 이터레이터 사용
+      if (/for\s+\w+\s+in\s+iter\(int,\s*1\)/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('for') + 1,
+          message: 'Potential infinite loop detected: iter(int, 1) creates an infinite iterator.',
+          severity: 'warning',
+        });
+      }
+    } else if (language === 'javascript') {
+      // JavaScript: while(true), while(1), for(;;)
+      if (/^\s*while\s*\(\s*(true|1|1\s*===\s*1|1\s*==\s*1)\s*\)/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('while') + 1,
+          message: 'Potential infinite loop detected: while(true/1). Consider adding a break condition or timeout.',
+          severity: 'warning',
+        });
+      }
+      if (/^\s*for\s*\(\s*;\s*;\s*\)/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('for') + 1,
+          message: 'Potential infinite loop detected: for(;;). Consider adding a break condition or timeout.',
+          severity: 'warning',
+        });
+      }
+    } else if (language === 'java') {
+      // Java: while(true), while(1), for(;;)
+      if (/^\s*while\s*\(\s*(true|1\s*==\s*1)\s*\)/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('while') + 1,
+          message: 'Potential infinite loop detected: while(true). Consider adding a break condition or timeout.',
+          severity: 'warning',
+        });
+      }
+      if (/^\s*for\s*\(\s*;\s*;\s*\)/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('for') + 1,
+          message: 'Potential infinite loop detected: for(;;). Consider adding a break condition or timeout.',
+          severity: 'warning',
+        });
+      }
+    }
+
+    // 재귀 호출 깊이 경고 (간단한 패턴 매칭)
+    // 같은 함수가 중첩되어 호출되는 경우 감지
+    const functionDefPattern = language === 'python' 
+      ? /def\s+(\w+)\s*\(/
+      : language === 'javascript'
+      ? /(?:function\s+)?(\w+)\s*\(|const\s+(\w+)\s*=\s*(?:async\s+)?\(/
+      : language === 'java'
+      ? /(?:public|private|protected|static)?\s*\w+\s+(\w+)\s*\(/
+      : language === 'go'
+      ? /func\s+(\w+)\s*\(/
+      : /fn\s+(\w+)\s*\(/; // Rust
+    
+    const defMatch = trimmed.match(functionDefPattern);
+    if (defMatch) {
+      const functionName = defMatch[1] || defMatch[2];
+      // 같은 함수가 호출되는지 확인 (간단한 검사)
+      if (functionName && new RegExp(`\\b${functionName}\\s*\\(`).test(code)) {
+        // 재귀 호출이 여러 번 중첩되는 경우 경고
+        const recursiveCalls = (code.match(new RegExp(`\\b${functionName}\\s*\\(`, 'g')) || []).length;
+        if (recursiveCalls > 3) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf(functionName) + 1,
+            message: `Recursive function "${functionName}" detected with ${recursiveCalls} calls. Ensure there is a base case to prevent infinite recursion.`,
+            severity: 'warning',
+          });
+        }
+      }
+    }
+  });
+
+  return errors;
+}
+
+/**
+ * 데드락 패턴 탐지 (정적 분석)
+ * 락, 세마포어, 대기 상태 관련 패턴 감지
+ */
+function detectDeadlocks(code: string, language: string): ValidationError[] {
+  const errors: ValidationError[] = [];
+  const lines = code.split('\n');
+
+  // 락/세마포어 관련 키워드 패턴
+  const lockPatterns = {
+    python: [
+      /\b(threading\.)?Lock\(\)/,
+      /\b(threading\.)?RLock\(\)/,
+      /\b(threading\.)?Semaphore\(\)/,
+      /\b(threading\.)?Event\(\)/,
+      /\b(threading\.)?Condition\(\)/,
+      /\bacquire\(\)/,
+      /\brelease\(\)/,
+    ],
+    javascript: [
+      /\bnew\s+Mutex\(/,
+      /\bnew\s+Semaphore\(/,
+      /\bacquire\(/,
+      /\brelease\(/,
+      /\block\(/,
+      /\bunlock\(/,
+    ],
+    java: [
+      /\bnew\s+(ReentrantLock|Semaphore|CountDownLatch|CyclicBarrier)\(/,
+      /\block\(\)/,
+      /\bunlock\(\)/,
+      /\bacquire\(\)/,
+      /\brelease\(\)/,
+      /\bwait\(\)/,
+      /\bnotify\(\)/,
+    ],
+    go: [
+      /\bsync\.(Mutex|RWMutex|Cond|WaitGroup)\(/,
+      /\bLock\(\)/,
+      /\bUnlock\(\)/,
+      /\bRLock\(\)/,
+      /\bRUnlock\(\)/,
+      /\bWait\(\)/,
+      /\bSignal\(\)/,
+      /\bBroadcast\(\)/,
+    ],
+    rust: [
+      /\bMutex::new\(/,
+      /\bRwLock::new\(/,
+      /\block\(\)/,
+      /\bunlock\(\)/,
+      /\bwait\(\)/,
+      /\bnotify\(\)/,
+      /\bnotify_all\(\)/,
+    ],
+  };
+
+  const patterns = lockPatterns[language as keyof typeof lockPatterns] || [];
+  let hasLockOperations = false;
+  const lockLines: number[] = [];
+
+  lines.forEach((line, index) => {
+    const lineNum = index + 1;
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) {
+      return;
+    }
+
+    // 락 관련 코드 감지
+    for (const pattern of patterns) {
+      if (pattern.test(trimmed)) {
+        hasLockOperations = true;
+        lockLines.push(lineNum);
+        
+        // acquire/lock 호출 후 release/unlock이 없는 경우 경고
+        if (/(acquire|lock)\(\)/.test(trimmed)) {
+          // 같은 블록 내에서 release/unlock이 있는지 확인 (간단한 검사)
+          const remainingCode = lines.slice(index).join('\n');
+          const hasRelease = /(release|unlock)\(\)/.test(remainingCode);
+          
+          if (!hasRelease) {
+            errors.push({
+              line: lineNum,
+              column: trimmed.indexOf('acquire') >= 0 ? trimmed.indexOf('acquire') + 1 : trimmed.indexOf('lock') + 1,
+              message: 'Lock acquired but no corresponding release/unlock found. This may cause deadlock.',
+              severity: 'warning',
+            });
+          }
+        }
+        break;
+      }
+    }
+
+    // 무한 대기 패턴 감지
+    if (language === 'python') {
+      // time.sleep()이 매우 큰 값이거나 무한 루프 내에서만 호출되는 경우
+      if (/time\.sleep\s*\(\s*(\d+)\s*\)/.test(trimmed)) {
+        const sleepMatch = trimmed.match(/time\.sleep\s*\(\s*(\d+)\s*\)/);
+        if (sleepMatch && parseInt(sleepMatch[1]) > 300) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf('sleep') + 1,
+            message: `Long sleep duration (${sleepMatch[1]}s) detected. Consider using timeout or interrupt mechanism.`,
+            severity: 'warning',
+          });
+        }
+      }
+    } else if (language === 'javascript') {
+      // setTimeout/setInterval이 없는 무한 대기
+      if (/await\s+new\s+Promise\s*\(/.test(trimmed) && !/resolve|reject/.test(trimmed)) {
+        errors.push({
+          line: lineNum,
+          column: trimmed.indexOf('Promise') + 1,
+          message: 'Promise created without resolve/reject. This may cause infinite waiting.',
+          severity: 'warning',
+        });
+      }
+    } else if (language === 'java') {
+      // wait() 호출 후 notify()가 없는 경우
+      if (/\bwait\s*\(/.test(trimmed)) {
+        const remainingCode = lines.slice(index).join('\n');
+        const hasNotify = /\bnotify(All)?\s*\(/.test(remainingCode);
+        
+        if (!hasNotify) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf('wait') + 1,
+            message: 'wait() called but no corresponding notify() found. This may cause deadlock.',
+            severity: 'warning',
+          });
+        }
+      }
+    } else if (language === 'go') {
+      // time.Sleep()이 매우 큰 값인 경우
+      if (/time\.Sleep\s*\(\s*(\d+)\s*\*/.test(trimmed) || /time\.Sleep\s*\(\s*time\.(\w+)\s*\(\s*(\d+)\s*\)/.test(trimmed)) {
+        const sleepMatch = trimmed.match(/time\.Sleep\s*\(\s*(\d+)/);
+        if (sleepMatch && parseInt(sleepMatch[1]) > 300) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf('Sleep') + 1,
+            message: `Long sleep duration detected. Consider using context with timeout or channel select.`,
+            severity: 'warning',
+          });
+        }
+      }
+      // select {} 블록이 있는 경우 (무한 대기 가능)
+      if (/^\s*select\s*\{/.test(trimmed)) {
+        const remainingCode = lines.slice(index, Math.min(index + 10, lines.length)).join('\n');
+        if (!/case\s+.*:/.test(remainingCode)) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf('select') + 1,
+            message: 'Empty select {} block detected. This will block forever. Consider adding cases or timeout.',
+            severity: 'warning',
+          });
+        }
+      }
+    } else if (language === 'rust') {
+      // thread::sleep()이 매우 큰 값인 경우
+      if (/thread::sleep\s*\(\s*Duration::(\w+)\s*\(\s*(\d+)/.test(trimmed)) {
+        const sleepMatch = trimmed.match(/Duration::(\w+)\s*\(\s*(\d+)/);
+        if (sleepMatch && sleepMatch[1] === 'from_secs' && parseInt(sleepMatch[2]) > 300) {
+          errors.push({
+            line: lineNum,
+            column: trimmed.indexOf('sleep') + 1,
+            message: `Long sleep duration (${sleepMatch[2]}s) detected. Consider using timeout or channel.`,
+            severity: 'warning',
+          });
+        }
+      }
+    }
+  });
+
+  // 락이 여러 개 사용되는 경우 데드락 가능성 경고
+  if (hasLockOperations && lockLines.length > 1) {
+    errors.push({
+      line: lockLines[0],
+      column: 1,
+      message: `Multiple lock operations detected (${lockLines.length} locations). Be careful about lock ordering to prevent deadlock.`,
+      severity: 'warning',
+    });
+  }
+
+  return errors;
 }
 
 /**
@@ -471,6 +781,11 @@ function validateGo(code: string): ValidationResult {
   const basicErrors = validateBasicSyntax(code);
   errors.push(...basicErrors);
 
+  // 정적 분석: 무한 루프 및 데드락 탐지
+  const infiniteLoopErrors = detectInfiniteLoops(code, 'go');
+  const deadlockErrors = detectDeadlocks(code, 'go');
+  errors.push(...infiniteLoopErrors, ...deadlockErrors);
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -519,6 +834,11 @@ function validateRust(code: string): ValidationResult {
   // 기본 문법 검사 추가
   const basicErrors = validateBasicSyntax(code);
   errors.push(...basicErrors);
+
+  // 정적 분석: 무한 루프 및 데드락 탐지
+  const infiniteLoopErrors = detectInfiniteLoops(code, 'rust');
+  const deadlockErrors = detectDeadlocks(code, 'rust');
+  errors.push(...infiniteLoopErrors, ...deadlockErrors);
 
   return {
     isValid: errors.length === 0,
