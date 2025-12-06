@@ -8,6 +8,8 @@ import { highlight, languages } from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
 import 'prismjs/themes/prism.css'; // Or a custom theme
 import { validateCode, type ValidationError } from '@/lib/codeValidator';
 interface CourierBoxProps {
@@ -42,38 +44,73 @@ def handler(event):
   const [codeErrors, setCodeErrors] = useState<ValidationError[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  // 현재 선택된 Runtime 객체
-  const currentRuntime = useMemo(() => runtimes.find(r => r.id === runtime), [runtimes, runtime]);
+  // 현재 선택된 runtime 객체 가져오기 (먼저 정의)
+  const currentRuntime = useMemo(() => {
+    return runtimes.find(r => r.id === runtime);
+  }, [runtimes, runtime]);
 
-  // Runtime에 따른 언어 매핑 (language 필드 우선 사용)
-  const currentLanguage = useMemo((): 'python' | 'javascript' | 'java' => {
-    if (currentRuntime?.language) {
-      const lang = currentRuntime.language.toLowerCase();
-      if (lang.includes('python')) return 'python';
-      if (lang.includes('javascript') || lang.includes('js') || lang.includes('node')) return 'javascript';
-      if (lang.includes('java')) return 'java';
+  // Runtime에 따른 언어 매핑 (확장 가능)
+  // 백엔드 응답의 name 필드("python", "nodejs", "java")를 우선 사용
+  const getLanguage = (runtime: string, runtimeLanguage?: string): string => {
+    // Runtime 객체의 language 필드가 있으면 우선 사용 (백엔드 name 필드에서 매핑됨)
+    if (runtimeLanguage) {
+      const lang = runtimeLanguage.toLowerCase().trim();
+      // 백엔드 name 필드 형식 정규화
+      // "nodejs" -> "javascript" (syntax highlighting과 일치시키기)
+      if (lang === 'nodejs' || lang === 'node') {
+        return 'javascript';
+      }
+      return lang;
     }
+    
     // Fallback: runtime ID에서 추출
-    if (runtime.includes('python')) return 'python';
-    if (runtime.includes('node') || runtime.includes('nodejs')) return 'javascript';
-    if (runtime.includes('java')) return 'java';
-    return 'python'; // 기본값
-  }, [currentRuntime, runtime]);
-
-  const getLanguage = (runtimeId: string): 'python' | 'javascript' | 'java' => {
-    const rt = runtimes.find(r => r.id === runtimeId);
-    if (rt?.language) {
-      const lang = rt.language.toLowerCase();
-      if (lang.includes('python')) return 'python';
-      if (lang.includes('javascript') || lang.includes('js') || lang.includes('node')) return 'javascript';
-      if (lang.includes('java')) return 'java';
-    }
-    // Fallback: runtime ID에서 추출
-    if (runtimeId.includes('python')) return 'python';
-    if (runtimeId.includes('node') || runtimeId.includes('nodejs')) return 'javascript';
-    if (runtimeId.includes('java')) return 'java';
-    return 'python'; // 기본값
+    const runtimeLower = runtime.toLowerCase();
+    if (runtimeLower.includes('python')) return 'python';
+    if (runtimeLower.includes('node') || runtimeLower.includes('nodejs')) return 'javascript';
+    if (runtimeLower.includes('java')) return 'java';
+    if (runtimeLower.includes('go')) return 'go';
+    if (runtimeLower.includes('rust')) return 'rust';
+    if (runtimeLower.includes('typescript') || runtimeLower.includes('ts')) return 'typescript';
+    return 'unknown'; // 기본값
   };
+
+  // 현재 언어 가져오기 (메모이제이션)
+  const currentLanguage = useMemo(() => getLanguage(runtime, currentRuntime?.language), [runtime, currentRuntime?.language]);
+
+  // Syntax highlighting 함수 (runtime 변경 시 재생성, 확장 가능)
+  const highlightCode = useMemo(() => {
+    return (code: string) => {
+      // Prism.js가 지원하는 언어 매핑
+      switch (currentLanguage) {
+        case 'python':
+          return highlight(code, languages.python, 'python');
+        case 'javascript':
+        case 'js':
+          return highlight(code, languages.javascript, 'javascript');
+        case 'java':
+          return highlight(code, languages.clike, 'java');
+        case 'go':
+          // Prism.js의 Go 언어 지원 확인
+          if (languages.go) {
+            return highlight(code, languages.go, 'go');
+          }
+          return highlight(code, languages.clike, 'go');
+        case 'rust':
+          // Prism.js의 Rust 언어 지원 확인
+          if (languages.rust) {
+            return highlight(code, languages.rust, 'rust');
+          }
+          return highlight(code, languages.clike, 'rust');
+        case 'typescript':
+        case 'ts':
+          // TypeScript는 JavaScript와 유사하게 처리
+          return highlight(code, languages.javascript, 'typescript');
+        default:
+          // 알 수 없는 언어는 기본 하이라이팅 (또는 텍스트 그대로)
+          return highlight(code, languages.clike, 'text');
+      }
+    };
+  }, [currentLanguage]);
 
   // 코드 변경 시 자동 검사 (디바운스)
   useEffect(() => {
@@ -84,9 +121,8 @@ def handler(event):
 
     setIsValidating(true);
     const timeoutId = setTimeout(() => {
-      const result = currentRuntime 
-        ? validateCode(code, currentRuntime)
-        : validateCode(code, runtime);
+      // Runtime 객체의 language 필드를 활용
+      const result = validateCode(code, runtime, currentRuntime?.language);
       setCodeErrors(result.errors);
       setIsValidating(false);
     }, 800); // 0.8초 디바운스
@@ -95,16 +131,15 @@ def handler(event):
       clearTimeout(timeoutId);
       setIsValidating(false);
     };
-  }, [code, runtime, currentRuntime]);
+  }, [code, runtime, currentRuntime?.language]);
 
   // Runtime 변경 시에도 검사
   useEffect(() => {
     if (code && code.trim().length > 0) {
       setIsValidating(true);
       const timeoutId = setTimeout(() => {
-        const result = currentRuntime 
-          ? validateCode(code, currentRuntime)
-          : validateCode(code, runtime);
+        // Runtime 객체의 language 필드를 활용
+        const result = validateCode(code, runtime, currentRuntime?.language);
         setCodeErrors(result.errors);
         setIsValidating(false);
       }, 300);
@@ -114,17 +149,15 @@ def handler(event):
         setIsValidating(false);
       };
     }
-  }, [runtime, currentRuntime, code]);
+  }, [runtime, currentRuntime?.language, code]);
 
   const hasErrors = codeErrors.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 최종 검사
-    const result = currentRuntime 
-      ? validateCode(code, currentRuntime)
-      : validateCode(code, runtime);
+    // 최종 검사 (Runtime 객체의 language 필드 활용)
+    const result = validateCode(code, runtime, currentRuntime?.language);
     setCodeErrors(result.errors);
     
     // 에러가 있으면 제출 차단
@@ -265,14 +298,10 @@ def handler(event):
                 hasErrors ? 'border-red-300' : 'border-gray-200'
               }`}>
                 <Editor
-                  key={`editor-${currentLanguage}`}
+                  key={`editor-${currentLanguage}`} // runtime 변경 시 재마운트
                   value={code}
                   onValueChange={code => setCode(code)}
-                  highlight={code => {
-                    if (currentLanguage === 'python') return highlight(code, languages.python, 'python');
-                    if (currentLanguage === 'javascript') return highlight(code, languages.javascript, 'javascript');
-                    return highlight(code, languages.clike, 'java');
-                  }}
+                  highlight={highlightCode}
                   padding={16}
                   className="font-mono text-sm"
                   style={{
@@ -284,7 +313,12 @@ def handler(event):
                 />
                 <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>
                   {currentLanguage === 'python' ? 'main.py' : 
-                   currentLanguage === 'javascript' ? 'index.js' : 'Handler.java'}
+                   currentLanguage === 'javascript' || currentLanguage === 'js' ? 'index.js' :
+                   currentLanguage === 'java' ? 'Handler.java' :
+                   currentLanguage === 'go' ? 'main.go' :
+                   currentLanguage === 'rust' ? 'main.rs' :
+                   currentLanguage === 'typescript' || currentLanguage === 'ts' ? 'index.ts' :
+                   'main.txt'}
                 </div>
               </div>
               {/* 에러 목록 표시 */}

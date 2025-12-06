@@ -6,6 +6,7 @@ import { LogViewer } from '@/components/features/delivery/LogViewer';
 import { useDeployFunction } from '@/hooks/useFunctions';
 import { useExecutionStream } from '@/hooks/useExecutionStream';
 import { useToast } from '@/context/ToastContext';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 export function HomePage() {
   const { mutateAsync: deployFunction, isPending: isDeploying } = useDeployFunction();
@@ -20,6 +21,13 @@ export function HomePage() {
 
   const handleSend = async (data: { runtime: string; handler: string; code: string; payload: string }) => {
     try {
+      // Rate Limit 체크
+      const rateLimitCheck = checkRateLimit();
+      if (!rateLimitCheck.allowed) {
+        toastError(rateLimitCheck.error || 'Too many requests. Please wait.');
+        throw new Error(rateLimitCheck.error);
+      }
+
       let parsedPayload = {};
       try {
         parsedPayload = JSON.parse(data.payload);
