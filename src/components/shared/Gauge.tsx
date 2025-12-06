@@ -64,7 +64,7 @@ export function Gauge({ value, label }: GaugeProps) {
         {/* Value Text */}
         <div className="absolute bottom-0 text-center translate-y-1">
             <span className={`text-3xl font-extrabold transition-colors duration-300`} style={{ color }}>
-                {isValid ? Math.round(clampedValue) : '??'}
+                {isValid ? clampedValue.toFixed(1) : '??'}
             </span>
             <span className="text-lg text-gray-400 font-bold ml-0.5">%</span>
         </div>

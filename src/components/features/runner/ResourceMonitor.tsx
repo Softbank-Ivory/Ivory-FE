@@ -14,7 +14,7 @@ export function ResourceMonitor() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="fixed top-24 right-8 z-30 flex flex-col gap-3 w-[260px]"
+        className="absolute top-24 right-8 z-30 flex flex-col gap-3 w-[260px]"
       >
         <Gauge 
             value={metrics?.cpu}
