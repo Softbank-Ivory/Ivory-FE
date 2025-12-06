@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Package, Send, Code, Settings, FileJson, Cpu, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useRuntimes } from '@/hooks/useFunctions';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +9,8 @@ import { highlight, languages } from 'prismjs';
 import 'prismjs/components/prism-clike';
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
 import 'prismjs/components/prism-go';
 import 'prismjs/components/prism-rust';
 import 'prismjs/themes/prism.css'; // Or a custom theme
@@ -105,6 +108,44 @@ def handler(event):
     };
   }, [currentLanguage]);
 
+  // 현재 언어 가져오기 (메모이제이션)
+  const currentLanguage = useMemo(() => getLanguage(runtime, currentRuntime?.language), [runtime, currentRuntime?.language]);
+
+  // Syntax highlighting 함수 (runtime 변경 시 재생성, 확장 가능)
+  const highlightCode = useMemo(() => {
+    return (code: string) => {
+      // Prism.js가 지원하는 언어 매핑
+      switch (currentLanguage) {
+        case 'python':
+          return highlight(code, languages.python, 'python');
+        case 'javascript':
+        case 'js':
+          return highlight(code, languages.javascript, 'javascript');
+        case 'java':
+          return highlight(code, languages.clike, 'java');
+        case 'go':
+          // Prism.js의 Go 언어 지원 확인
+          if (languages.go) {
+            return highlight(code, languages.go, 'go');
+          }
+          return highlight(code, languages.clike, 'go');
+        case 'rust':
+          // Prism.js의 Rust 언어 지원 확인
+          if (languages.rust) {
+            return highlight(code, languages.rust, 'rust');
+          }
+          return highlight(code, languages.clike, 'rust');
+        case 'typescript':
+        case 'ts':
+          // TypeScript는 JavaScript와 유사하게 처리
+          return highlight(code, languages.javascript, 'typescript');
+        default:
+          // 알 수 없는 언어는 기본 하이라이팅 (또는 텍스트 그대로)
+          return highlight(code, languages.clike, 'text');
+      }
+    };
+  }, [currentLanguage]);
+
   // 코드 변경 시 자동 검사 (디바운스)
   useEffect(() => {
     if (!code || code.trim().length === 0) {
@@ -116,6 +157,8 @@ def handler(event):
     const timeoutId = setTimeout(() => {
       // Runtime 객체의 language 필드를 활용
       const result = validateCode(code, runtime, currentRuntime?.language);
+      // Runtime 객체의 language 필드를 활용
+      const result = validateCode(code, runtime, currentRuntime?.language);
       setCodeErrors(result.errors);
       setIsValidating(false);
     }, 800); // 0.8초 디바운스
@@ -125,12 +168,15 @@ def handler(event):
       setIsValidating(false);
     };
   }, [code, runtime, currentRuntime?.language]);
+  }, [code, runtime, currentRuntime?.language]);
 
   // Runtime 변경 시에도 검사
   useEffect(() => {
     if (code && code.trim().length > 0) {
       setIsValidating(true);
       const timeoutId = setTimeout(() => {
+        // Runtime 객체의 language 필드를 활용
+        const result = validateCode(code, runtime, currentRuntime?.language);
         // Runtime 객체의 language 필드를 활용
         const result = validateCode(code, runtime, currentRuntime?.language);
         setCodeErrors(result.errors);
@@ -143,12 +189,15 @@ def handler(event):
       };
     }
   }, [runtime, currentRuntime?.language, code]);
+  }, [runtime, currentRuntime?.language, code]);
 
   const hasErrors = codeErrors.length > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // 최종 검사 (Runtime 객체의 language 필드 활용)
+    const result = validateCode(code, runtime, currentRuntime?.language);
     // 최종 검사 (Runtime 객체의 language 필드 활용)
     const result = validateCode(code, runtime, currentRuntime?.language);
     setCodeErrors(result.errors);
@@ -176,7 +225,7 @@ def handler(event):
   };
 
   return (
-    <div className="relative w-full max-w-3xl perspective-1000">
+    <div className="relative w-full perspective-1000 overflow-hidden ">
       {/* The Box */}
       <motion.div 
         initial={{ rotateX: 5 }}
@@ -186,12 +235,13 @@ def handler(event):
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full texture-tape pointer-events-none z-10 border-x border-white/10" />
         
         {/* Fragile Sticker */}
-        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
+        <div className="absolute -top-0 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
           FRAGILE: CODE INSIDE
         </div>
 
         {/* The Label (Form) */}
         <div className="texture-paper rounded-sm p-8 relative z-20 max-w-3xl mx-auto transform -rotate-1">
+
           {/* Stamp Animation */}
           <AnimatePresence>
             {stampStatus !== 'idle' && (
@@ -200,9 +250,9 @@ def handler(event):
                 animate={{ opacity: 0.8, scale: 1, rotate: stampStatus === 'approved' ? -15 : 15 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-8 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-6`}
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-4 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-4`}
               >
-                <div className="text-8xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
+                <div className="text-6xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
                   {stampStatus === 'approved' ? 'APPROVED' : 'REJECTED'}
                 </div>
               </motion.div>
@@ -292,8 +342,10 @@ def handler(event):
               }`}>
                 <Editor
                   key={`editor-${currentLanguage}`} // runtime 변경 시 재마운트
+                  key={`editor-${currentLanguage}`} // runtime 변경 시 재마운트
                   value={code}
                   onValueChange={code => setCode(code)}
+                  highlight={highlightCode}
                   highlight={highlightCode}
                   padding={16}
                   className="font-mono text-sm"
@@ -305,6 +357,13 @@ def handler(event):
                   textareaClassName="focus:outline-none"
                 />
                 <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>
+                  {currentLanguage === 'python' ? 'main.py' : 
+                   currentLanguage === 'javascript' || currentLanguage === 'js' ? 'index.js' :
+                   currentLanguage === 'java' ? 'Handler.java' :
+                   currentLanguage === 'go' ? 'main.go' :
+                   currentLanguage === 'rust' ? 'main.rs' :
+                   currentLanguage === 'typescript' || currentLanguage === 'ts' ? 'index.ts' :
+                   'main.txt'}
                   {currentLanguage === 'python' ? 'main.py' : 
                    currentLanguage === 'javascript' || currentLanguage === 'js' ? 'index.js' :
                    currentLanguage === 'java' ? 'Handler.java' :
@@ -362,7 +421,7 @@ def handler(event):
           </form>
           
           {/* Decorative Pen */}
-          <div className="absolute -right-24 bottom-12 transform rotate-12 pointer-events-none z-30">
+          <div className="absolute -right-8 bottom-8 transform rotate-12 pointer-events-none z-30">
             <RealisticPen className="w-32 h-auto filter drop-shadow-2xl" />
           </div>
         </div>
