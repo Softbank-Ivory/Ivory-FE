@@ -24,10 +24,10 @@ const ExecutionContext = createContext<ExecutionContextType | undefined>(undefin
 export function ExecutionProvider({ children }: { children: React.ReactNode }) {
   const [executions, setExecutions] = useState<ActiveExecution[]>([]);
   const { mutateAsync: deployFunction } = useDeployFunction();
-  
+
   // Keep track of cleanup functions for streams
   const streamCleanupsRef = useRef<Record<string, () => void>>({});
-  
+
   // Queue for status updates to ensure minimum display time
   const statusQueueRef = useRef<Record<string, ExecutionStatus[]>>({});
   const isProcessingStatusRef = useRef<Record<string, boolean>>({});
@@ -36,7 +36,7 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
   const processStatusQueue = useCallback((invocationId: string) => {
     // If we're already processing (waiting), do nothing. The timeout will trigger next step.
     // However, this function is called when expected 'wait' is over, OR when a new item is added and we were idle.
-    
+
     // Check if there are items in the queue
     const queue = statusQueueRef.current[invocationId];
     if (!queue || queue.length === 0) {
@@ -50,7 +50,7 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
     // Dequeue next status
     const nextStatus = queue.shift();
     if (nextStatus) {
-      setExecutions(prev => prev.map(ex => 
+      setExecutions(prev => prev.map(ex =>
         ex.id === invocationId ? { ...ex, status: nextStatus } : ex
       ));
 
@@ -108,24 +108,24 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
           queueStatusUpdate(invocationId, status);
         },
         onLog: (log) => {
-          setExecutions(prev => prev.map(ex => 
-            ex.id === invocationId ? { ...ex, logs: [...ex.logs, log] } : ex
+          setExecutions(prev => prev.map(ex =>
+            ex.id === invocationId ? { ...ex, logs: [...ex.logs, { ...log, invocationId }] } : ex
           ));
         },
         onResult: (result) => {
-          setExecutions(prev => prev.map(ex => 
+          setExecutions(prev => prev.map(ex =>
             ex.id === invocationId ? { ...ex, result } : ex
           ));
           // If result comes before COMPLETED status in queue, it's fine, 
           // it will be stored in state but maybe not shown until modal opens (which often depends on COMPLETED status).
         },
         onError: (error) => {
-          setExecutions(prev => prev.map(ex => 
+          setExecutions(prev => prev.map(ex =>
             ex.id === invocationId ? { ...ex, error } : ex
           ));
         },
         onDuration: (duration) => {
-          setExecutions(prev => prev.map(ex => 
+          setExecutions(prev => prev.map(ex =>
             ex.id === invocationId ? { ...ex, durationMs: duration } : ex
           ));
         }
@@ -142,8 +142,8 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
   const removeExecution = useCallback((id: string) => {
     // Cleanup stream if active
     if (streamCleanupsRef.current[id]) {
-        streamCleanupsRef.current[id]();
-        delete streamCleanupsRef.current[id];
+      streamCleanupsRef.current[id]();
+      delete streamCleanupsRef.current[id];
     }
     // Cleanup queues
     delete statusQueueRef.current[id];

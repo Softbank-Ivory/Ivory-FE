@@ -34,6 +34,7 @@ export interface Execution {
 
 export interface LogEntry {
   id: string;
+  invocationId?: string;
   timestamp: string;
   level: 'INFO' | 'WARN' | 'ERROR';
   message: string;
