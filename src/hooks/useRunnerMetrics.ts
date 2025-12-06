@@ -27,7 +27,8 @@ export function useRunnerMetrics() {
 
     eventSource.onerror = (error) => {
       console.error('Runner Metrics SSE Error:', error);
-      eventSource.close();
+      // Do not close explicitly, let EventSource retry connection
+      // eventSource.close(); 
     };
 
     return () => {
