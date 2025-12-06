@@ -11,7 +11,7 @@ import { checkRateLimit } from '@/lib/rateLimiter';
 export function HomePage() {
   const { mutateAsync: deployFunction, isPending: isDeploying } = useDeployFunction();
   const { error: toastError } = useToast();
-  
+
   const [executionId, setExecutionId] = useState<string | undefined>(undefined);
   const [isAnimationVisible, setIsAnimationVisible] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
@@ -66,10 +66,10 @@ export function HomePage() {
   return (
     <div className="min-h-screen bg-[#f4f1ea] flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden relative transition-colors duration-300 dark:bg-zinc-900">
       {/* Background Texture */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#8b4513 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
+      <div className="absolute inset-0 opacity-5 pointer-events-none"
+        style={{ backgroundImage: 'radial-gradient(#8b4513 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
       </div>
-      
+
       {/* Dynamic Background Elements */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-300/20 rounded-full blur-3xl animate-blob" />
@@ -78,26 +78,27 @@ export function HomePage() {
       </div>
 
 
-      
+
       <div className="w-full max-w-7xl flex flex-col items-center gap-8 relative z-10">
-        <CourierBox 
-          onSend={handleSend} 
+        <CourierBox
+          onSend={handleSend}
           onSuccess={handleDeliveryStart}
-          isSending={isDeploying || (isAnimationVisible && streamStatus !== 'COMPLETED' && streamStatus !== 'FAILED')} 
+          isSending={isDeploying || (isAnimationVisible && streamStatus !== 'COMPLETED' && streamStatus !== 'FAILED')}
         />
       </div>
 
-      <DeliveryAnimation 
-        status={isAnimationVisible ? (streamStatus || 'REQUEST_RECEIVED') : 'idle'} 
+      <DeliveryAnimation
+        status={isAnimationVisible ? (streamStatus || 'REQUEST_RECEIVED') : 'idle'}
         statusMessage={streamStatus?.replace('_', ' ')}
-        onComplete={handleAnimationComplete} 
+        onComplete={handleAnimationComplete}
       />
 
-      <LogViewer 
-        logs={logs} 
-        isOpen={isLogOpen} 
+      <LogViewer
+        logs={logs}
+        status={streamStatus || 'idle'}
+        isOpen={isLogOpen}
         isVisible={!!executionId || isDeploying}
-        onToggle={() => setIsLogOpen(!isLogOpen)} 
+        onToggle={() => setIsLogOpen(!isLogOpen)}
       />
     </div>
   );
