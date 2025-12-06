@@ -87,7 +87,7 @@ export function HomePage() {
         <LogViewer
           executions={executions}
           isOpen={isLogOpen}
-          isVisible={executions.length > 0 || isSending}
+          isVisible={true}
           onToggle={() => setIsLogOpen(!isLogOpen)}
         />
       </div>
