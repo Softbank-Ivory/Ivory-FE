@@ -1,17 +1,39 @@
-// import { useState } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ClipboardList, Terminal, X, Box, Server, CheckCircle, FileText, Truck, AlertCircle } from 'lucide-react';
-import type { LogEntry, ExecutionStatus } from '@/types/api';
+import type { ExecutionStatus } from '@/types/api';
+import type { ActiveExecution } from '@/contexts/ExecutionContext';
+import { getColorFromId } from '@/utils/color';
 
 interface LogViewerProps {
-  logs: LogEntry[];
-  status?: ExecutionStatus | 'idle';
+  executions: ActiveExecution[];
   isOpen: boolean;
   isVisible: boolean;
   onToggle: () => void;
 }
 
-export function LogViewer({ logs, status = 'idle', isOpen, isVisible, onToggle }: LogViewerProps) {
+export function LogViewer({ executions = [], isOpen, isVisible, onToggle }: LogViewerProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Memoize logs to prevent unnecessary recalculations and ensure stable references
+  const allLogs = useMemo(() => {
+    return (executions || []).flatMap(ex => ex.logs).sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, [executions]);
+
+  // Memoize reversed executions for the status list
+  const reversedExecutions = useMemo(() => {
+    return [...(executions || [])].reverse();
+  }, [executions]);
+
+  // Auto-scroll to bottom of logs
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [allLogs.length, isOpen]); // Added isOpen to scroll when opened
+
   const STEPS = [
     { id: 'REQUEST_RECEIVED', label: 'Request', icon: FileText },
     { id: 'CODE_FETCHING', label: 'Code', icon: Box },
@@ -20,14 +42,11 @@ export function LogViewer({ logs, status = 'idle', isOpen, isVisible, onToggle }
     { id: 'COMPLETED', label: 'Done', icon: CheckCircle },
   ] as const;
 
-  const getCurrentStepIndex = () => {
-    if (status === 'FAILED') return -1; // Special handling for failed
-    if (status === 'idle') return -1;
+  const getStepIndex = (status: ExecutionStatus | undefined) => {
+    if (!status || status === 'FAILED') return -1;
     return STEPS.findIndex(step => step.id === status);
   };
 
-  const currentStepIndex = getCurrentStepIndex();
-  const isFailed = status === 'FAILED';
   if (!isVisible && !isOpen) return null;
 
   return (
@@ -66,7 +85,7 @@ export function LogViewer({ logs, status = 'idle', isOpen, isVisible, onToggle }
                 Execution Logs
               </h3>
               <div className="flex items-center gap-4">
-                <span className="text-xs font-mono text-gray-400">{logs.length} entries</span>
+                <span className="text-xs font-mono text-gray-400">{allLogs.length} entries</span>
                 <button
                   onClick={onToggle}
                   className="p-2 hover:bg-white/10 rounded-full text-gray-400 hover:text-white transition-colors"
@@ -76,76 +95,111 @@ export function LogViewer({ logs, status = 'idle', isOpen, isVisible, onToggle }
               </div>
             </div>
 
-            {/* Timeline Section */}
-            <div className="px-6 py-6 bg-black/20 border-b border-white/5">
-              <div className="flex items-center justify-between relative">
-                {/* Connecting Line */}
-                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-700 -z-10 transform -translate-y-1/2" />
-
-                {/* Progress Line */}
-                <div
-                  className={`absolute top-1/2 left-0 h-0.5 -z-10 transform -translate-y-1/2 transition-all duration-500 ease-in-out ${isFailed ? 'bg-red-500' : 'bg-[#8d6e63]'}`}
-                  style={{
-                    width: isFailed ? '100%' : `${(Math.max(0, currentStepIndex) / (STEPS.length - 1)) * 100}%`
-                  }}
-                />
-
-                {STEPS.map((step, index) => {
-                  const isCompleted = !isFailed && index <= currentStepIndex;
-                  const isActive = !isFailed && index === currentStepIndex;
-
-                  let circleColor = 'bg-gray-800 border-gray-600 text-gray-500';
-                  if (isFailed) {
-                    circleColor = 'bg-red-900/50 border-red-500 text-red-500';
-                  } else if (isActive) {
-                    circleColor = 'bg-[#8d6e63] border-[#8d6e63] text-white scale-125 shadow-[0_0_15px_rgba(141,110,99,0.5)]';
-                  } else if (isCompleted) {
-                    circleColor = 'bg-[#5d4037] border-[#8d6e63] text-[#8d6e63]';
-                  }
+            {/* Active Executions Status List */}
+            <div className="px-6 py-4 bg-black/20 border-b border-white/5 space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar">
+              {executions.length === 0 ? (
+                <div className="text-center text-gray-500 text-xs py-2">No active executions</div>
+              ) : (
+                reversedExecutions.map((ex) => {
+                  const currentIndex = getStepIndex(ex.status);
+                  const isFailed = ex.status === 'FAILED';
+                  const color = getColorFromId(ex.id);
 
                   return (
-                    <div key={step.id} className="flex flex-col items-center gap-2 group cursor-default">
-                      <div
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 z-10 ${circleColor}`}
-                      >
-                        <step.icon size={14} strokeWidth={isCompleted || isActive ? 2.5 : 2} />
+                    <div key={ex.id} className="bg-white/5 rounded-lg p-3 border border-white/5 relative overflow-hidden transition-colors hover:bg-white/10">
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/20 border"
+                          style={{ color: color, borderColor: `${color}33` }}
+                        >
+                          {ex.id}
+                        </span>
+                        <span className={`text-[10px] font-bold ${isFailed ? 'text-red-400' : 'text-gray-400'}`}>
+                          {ex.status.replace('_', ' ')}
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 ${isActive ? 'text-[#8d6e63]' : 'text-gray-500'
-                        }`}>
-                        {step.label}
-                      </span>
+
+                      {/* Compact Timeline */}
+                      <div className="flex items-center justify-between relative px-1 mt-3">
+                        {/* Progress Line backing */}
+                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-700 -z-10 transform -translate-y-1/2 rounded-full" />
+
+                        {/* Active Progress Line */}
+                        <div
+                          className={`absolute top-1/2 left-0 h-0.5 -z-10 transform -translate-y-1/2 transition-all duration-500 ease-in-out ${isFailed ? 'bg-red-500' : 'bg-gray-500'}`}
+                          style={{
+                            width: isFailed ? '100%' : `${(Math.max(0, currentIndex) / (STEPS.length - 1)) * 100}%`,
+                            backgroundColor: isFailed ? undefined : color,
+                            boxShadow: isFailed ? '0 0 10px rgba(239, 68, 68, 0.5)' : `0 0 10px ${color}`
+                          }}
+                        />
+
+                        {STEPS.map((step, index) => {
+                          const isCompleted = !isFailed && index <= currentIndex;
+                          const isActive = !isFailed && index === currentIndex;
+
+                          return (
+                            <div key={step.id} className="relative group">
+                              <div
+                                className={`w-2 h-2 rounded-full transition-all duration-300 ${isActive ? 'scale-150' : ''
+                                  }`}
+                                style={{
+                                  backgroundColor: isFailed ? '#ef4444' : (isCompleted ? color : '#374151'),
+                                  boxShadow: isActive ? `0 0 8px ${color}` : undefined,
+                                  border: isActive ? `1px solid ${color}` : 'none'
+                                }}
+                              />
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-1 bg-black text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-20 border border-white/10">
+                                {step.label}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Failure Message */}
+                      {isFailed && (
+                        <div className="mt-3 flex items-center gap-2 text-red-400 text-[10px]">
+                          <AlertCircle size={12} />
+                          <span>Execution Failed</span>
+                        </div>
+                      )}
                     </div>
                   );
-                })}
-              </div>
-
-              {isFailed && (
-                <div className="mt-4 p-3 bg-red-900/20 border border-red-900/50 rounded flex items-center gap-3 text-red-400">
-                  <AlertCircle size={16} />
-                  <span className="text-xs font-bold">Execution Failed</span>
-                </div>
+                })
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 font-mono text-sm space-y-2 text-gray-300">
-              {logs.length === 0 ? (
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 font-mono text-sm space-y-2 text-gray-300">
+              {allLogs.length === 0 ? (
                 <div className="text-center text-gray-500 py-12 italic">
                   Waiting for updates...
                 </div>
               ) : (
-                logs.map((log, index) => (
-                  <div key={log.id} className="flex gap-3 bg-black/40 p-3 rounded-md border border-white/5 hover:border-white/20 transition-all group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                allLogs.map((log, index) => (
+                  <div key={`${log.id}-${index}`} className="flex gap-3 bg-black/40 p-3 rounded-md border border-white/5 hover:border-white/20 transition-all group animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex flex-col items-center gap-1 sm:pt-1">
                       <span className="text-[10px] text-gray-500 font-mono opacity-50 group-hover:opacity-100 transition-opacity">{new Date(log.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                     </div>
                     <div className="flex-1 min-w-0 font-mono text-sm">
                       <div className="flex items-start gap-3">
+                        {/* Invocation ID */}
+                        {log.invocationId && (
+                          <span
+                            className="text-[10px] font-mono mt-0.5 shrink-0 select-none px-1.5 py-0.5 rounded bg-white/5 border border-white/10"
+                            style={{ color: getColorFromId(log.invocationId), borderColor: `${getColorFromId(log.invocationId)}33` }}
+                          >
+                            {log.invocationId}
+                          </span>
+                        )}
+
                         {/* Status Dot */}
                         <div className="mt-1.5 relative">
                           <div className={`w-2.5 h-2.5 rounded-full ${log.level === 'ERROR' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' :
                             log.level === 'WARN' ? 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]' :
                               'bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]'
-                            } ${index === logs.length - 1 ? 'animate-pulse' : ''}`} />
+                            } ${index === allLogs.length - 1 ? 'animate-pulse' : ''}`} />
                         </div>
 
                         <span className={`break-all whitespace-pre-wrap leading-relaxed ${log.level === 'ERROR' ? 'text-red-200' :
@@ -160,9 +214,8 @@ export function LogViewer({ logs, status = 'idle', isOpen, isVisible, onToggle }
               )}
             </div>
           </motion.div>
-
         )}
-      </AnimatePresence >
+      </AnimatePresence>
     </>
   );
 }

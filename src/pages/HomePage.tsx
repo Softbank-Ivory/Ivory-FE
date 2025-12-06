@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CourierBox } from '@/components/features/delivery/CourierBox';
 import { DeliveryAnimation } from '@/components/features/delivery/DeliveryAnimation';
+import { LogViewer } from '@/components/features/delivery/LogViewer';
 import { useToast } from '@/contexts/ToastContext';
 import { useExecutionContext } from '@/contexts/ExecutionContext';
 import { useRunnerMetrics } from '@/hooks/useRunnerMetrics';
@@ -10,10 +11,11 @@ import { checkRateLimit } from '@/lib/rateLimiter';
 
 export function HomePage() {
   useRunnerMetrics();
-  const { startExecution } = useExecutionContext();
+  const { startExecution, executions } = useExecutionContext();
   const { error: toastError } = useToast();
   // const [isCourierOpen, setIsCourierOpen] = useState(false); // Removed for split screen
   const [isSending, setIsSending] = useState(false);
+  const [isLogOpen, setIsLogOpen] = useState(false);
 
   const handleSend = async (data: {
     runtime: string;
@@ -37,6 +39,9 @@ export function HomePage() {
         setIsSending(false);
         throw e;
       }
+
+      setIsLogOpen(true); // Open logs immediately
+      setIsSending(true);
 
       await startExecution({
         code: data.code,
@@ -77,6 +82,13 @@ export function HomePage() {
       {/* RIGHT: Full Map View */}
       <div className="flex-1 h-full relative bg-[#f0f0f0]">
         <DeliveryAnimation />
+
+        <LogViewer
+          executions={executions}
+          isOpen={isLogOpen}
+          isVisible={executions.length > 0 || isSending}
+          onToggle={() => setIsLogOpen(!isLogOpen)}
+        />
       </div>
     </div>
   );

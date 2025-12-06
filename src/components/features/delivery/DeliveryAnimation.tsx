@@ -12,13 +12,6 @@ export function DeliveryAnimation() {
   const [showLogs, setShowLogs] = useState(false);
   const [selectedResult, setSelectedResult] = useState<ActiveExecution | null>(null);
 
-  // Collate all logs from all active executions (or just the first one if preferred)
-  // Flatten and sort by timestamp if needed, or just take the latest active one.
-  // For simplicity, let's merge them all.
-  const allLogs = executions
-    .flatMap((e) => e.logs)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
   return (
     <div className="absolute inset-0 z-0 bg-[#e0ded6] overflow-hidden">
       {/* 
@@ -109,7 +102,7 @@ export function DeliveryAnimation() {
 
       {/* Log Viewer Modal (Absolute Positioned in this Right Panel) */}
       <LogViewer
-        logs={allLogs}
+        executions={executions}
         isOpen={showLogs}
         isVisible={true}
         onToggle={() => setShowLogs(!showLogs)}
