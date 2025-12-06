@@ -19,6 +19,28 @@ export function validatePython(code: string): ValidationResult {
   const errors: ValidationError[] = [];
   const lines = code.split('\n');
 
+  // Cross-language detection: JavaScript/Java 키워드 감지
+  const jsKeywords = /\b(const|let|var|function|=>|console\.|require\(|module\.exports|export\s+(default\s+)?(function|const|let|var)|import\s+.*\s+from)/;
+  const javaKeywords = /\b(public|private|protected|class\s+\w+|interface\s+\w+|package\s+|import\s+.*;|System\.out\.|@Override|@Deprecated)/;
+  
+  if (jsKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'JavaScript syntax detected. Please use Python runtime or write Python code.',
+      severity: 'error',
+    });
+  }
+  
+  if (javaKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'Java syntax detected. Please use Java runtime or write Python code.',
+      severity: 'error',
+    });
+  }
+
   lines.forEach((line, index) => {
     const lineNum = index + 1;
     const trimmed = line.trim();
@@ -131,6 +153,28 @@ export function validateJavaScript(code: string): ValidationResult {
   const errors: ValidationError[] = [];
   const lines = code.split('\n');
 
+  // Cross-language detection: Python/Java 키워드 감지
+  const pythonKeywords = /\b(def\s+\w+|import\s+\w+|from\s+\w+\s+import|print\(|if\s+.*:|for\s+.*:|while\s+.*:|class\s+\w+.*:|try:|except\s+|finally:)/;
+  const javaKeywords = /\b(public|private|protected|class\s+\w+|interface\s+\w+|package\s+|System\.out\.|@Override|@Deprecated|String\s+\w+\s*=)/;
+  
+  if (pythonKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'Python syntax detected. Please use Python runtime or write JavaScript code.',
+      severity: 'error',
+    });
+  }
+  
+  if (javaKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'Java syntax detected. Please use Java runtime or write JavaScript code.',
+      severity: 'error',
+    });
+  }
+
   lines.forEach((line, index) => {
     const lineNum = index + 1;
     const trimmed = line.trim();
@@ -193,6 +237,28 @@ export function validateJava(code: string): ValidationResult {
   const errors: ValidationError[] = [];
   const lines = code.split('\n');
 
+  // Cross-language detection: Python/JavaScript 키워드 감지
+  const pythonKeywords = /\b(def\s+\w+|import\s+\w+|from\s+\w+\s+import|print\(|if\s+.*:|for\s+.*:|while\s+.*:|class\s+\w+.*:|try:|except\s+|finally:)/;
+  const jsKeywords = /\b(const|let|var|function|=>|console\.|require\(|module\.exports|export\s+(default\s+)?(function|const|let|var)|import\s+.*\s+from)/;
+  
+  if (pythonKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'Python syntax detected. Please use Python runtime or write Java code.',
+      severity: 'error',
+    });
+  }
+  
+  if (jsKeywords.test(code)) {
+    errors.push({
+      line: 1,
+      column: 1,
+      message: 'JavaScript syntax detected. Please use JavaScript runtime or write Java code.',
+      severity: 'error',
+    });
+  }
+
   lines.forEach((line, index) => {
     const lineNum = index + 1;
     const trimmed = line.trim();
@@ -239,11 +305,36 @@ export function validateJava(code: string): ValidationResult {
 }
 
 /**
+ * Runtime ID에서 언어 추출
+ */
+function extractLanguage(runtime: string, runtimeLanguage?: string): 'python' | 'javascript' | 'java' | null {
+  // runtimeLanguage 필드가 있으면 우선 사용
+  if (runtimeLanguage) {
+    const lang = runtimeLanguage.toLowerCase();
+    if (lang.includes('python')) return 'python';
+    if (lang.includes('javascript') || lang.includes('js') || lang.includes('node')) return 'javascript';
+    if (lang.includes('java')) return 'java';
+  }
+  
+  // runtime ID에서 추출
+  const runtimeLower = runtime.toLowerCase();
+  if (runtimeLower.includes('python')) return 'python';
+  if (runtimeLower.includes('node') || runtimeLower.includes('nodejs')) return 'javascript';
+  if (runtimeLower.includes('java')) return 'java';
+  
+  return null;
+}
+
+/**
  * Runtime에 따른 코드 검사
+ * @param code - 검사할 코드
+ * @param runtime - Runtime ID 또는 Runtime 객체
+ * @param runtimeLanguage - Runtime의 language 필드 (선택적)
  */
 export function validateCode(
   code: string,
-  runtime: string
+  runtime: string | { id: string; language?: string },
+  runtimeLanguage?: string
 ): ValidationResult {
   if (!code || code.trim().length === 0) {
     return {
@@ -252,13 +343,25 @@ export function validateCode(
     };
   }
 
-  const runtimeLower = runtime.toLowerCase();
+  // Runtime 객체인 경우 language 필드 추출
+  let runtimeId: string;
+  let lang: string | undefined;
   
-  if (runtimeLower.includes('python')) {
+  if (typeof runtime === 'object') {
+    runtimeId = runtime.id;
+    lang = runtime.language;
+  } else {
+    runtimeId = runtime;
+    lang = runtimeLanguage;
+  }
+
+  const detectedLanguage = extractLanguage(runtimeId, lang);
+  
+  if (detectedLanguage === 'python') {
     return validatePython(code);
-  } else if (runtimeLower.includes('node') || runtimeLower.includes('nodejs')) {
+  } else if (detectedLanguage === 'javascript') {
     return validateJavaScript(code);
-  } else if (runtimeLower.includes('java')) {
+  } else if (detectedLanguage === 'java') {
     return validateJava(code);
   }
 

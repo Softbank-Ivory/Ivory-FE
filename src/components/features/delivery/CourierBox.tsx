@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Package, Send, Code, Settings, FileJson, Cpu, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useRuntimes } from '@/hooks/useFunctions';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,11 +42,36 @@ def handler(event):
   const [codeErrors, setCodeErrors] = useState<ValidationError[]>([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Runtime에 따른 언어 매핑
-  const getLanguage = (runtime: string): 'python' | 'javascript' | 'java' => {
+  // 현재 선택된 Runtime 객체
+  const currentRuntime = useMemo(() => runtimes.find(r => r.id === runtime), [runtimes, runtime]);
+
+  // Runtime에 따른 언어 매핑 (language 필드 우선 사용)
+  const currentLanguage = useMemo((): 'python' | 'javascript' | 'java' => {
+    if (currentRuntime?.language) {
+      const lang = currentRuntime.language.toLowerCase();
+      if (lang.includes('python')) return 'python';
+      if (lang.includes('javascript') || lang.includes('js') || lang.includes('node')) return 'javascript';
+      if (lang.includes('java')) return 'java';
+    }
+    // Fallback: runtime ID에서 추출
     if (runtime.includes('python')) return 'python';
     if (runtime.includes('node') || runtime.includes('nodejs')) return 'javascript';
     if (runtime.includes('java')) return 'java';
+    return 'python'; // 기본값
+  }, [currentRuntime, runtime]);
+
+  const getLanguage = (runtimeId: string): 'python' | 'javascript' | 'java' => {
+    const rt = runtimes.find(r => r.id === runtimeId);
+    if (rt?.language) {
+      const lang = rt.language.toLowerCase();
+      if (lang.includes('python')) return 'python';
+      if (lang.includes('javascript') || lang.includes('js') || lang.includes('node')) return 'javascript';
+      if (lang.includes('java')) return 'java';
+    }
+    // Fallback: runtime ID에서 추출
+    if (runtimeId.includes('python')) return 'python';
+    if (runtimeId.includes('node') || runtimeId.includes('nodejs')) return 'javascript';
+    if (runtimeId.includes('java')) return 'java';
     return 'python'; // 기본값
   };
 
@@ -59,7 +84,9 @@ def handler(event):
 
     setIsValidating(true);
     const timeoutId = setTimeout(() => {
-      const result = validateCode(code, runtime);
+      const result = currentRuntime 
+        ? validateCode(code, currentRuntime)
+        : validateCode(code, runtime);
       setCodeErrors(result.errors);
       setIsValidating(false);
     }, 800); // 0.8초 디바운스
@@ -68,14 +95,16 @@ def handler(event):
       clearTimeout(timeoutId);
       setIsValidating(false);
     };
-  }, [code, runtime]);
+  }, [code, runtime, currentRuntime]);
 
   // Runtime 변경 시에도 검사
   useEffect(() => {
     if (code && code.trim().length > 0) {
       setIsValidating(true);
       const timeoutId = setTimeout(() => {
-        const result = validateCode(code, runtime);
+        const result = currentRuntime 
+          ? validateCode(code, currentRuntime)
+          : validateCode(code, runtime);
         setCodeErrors(result.errors);
         setIsValidating(false);
       }, 300);
@@ -85,7 +114,7 @@ def handler(event):
         setIsValidating(false);
       };
     }
-  }, [runtime]);
+  }, [runtime, currentRuntime, code]);
 
   const hasErrors = codeErrors.length > 0;
 
@@ -93,7 +122,9 @@ def handler(event):
     e.preventDefault();
     
     // 최종 검사
-    const result = validateCode(code, runtime);
+    const result = currentRuntime 
+      ? validateCode(code, currentRuntime)
+      : validateCode(code, runtime);
     setCodeErrors(result.errors);
     
     // 에러가 있으면 제출 차단
@@ -234,12 +265,12 @@ def handler(event):
                 hasErrors ? 'border-red-300' : 'border-gray-200'
               }`}>
                 <Editor
+                  key={`editor-${currentLanguage}`}
                   value={code}
                   onValueChange={code => setCode(code)}
                   highlight={code => {
-                    const lang = getLanguage(runtime);
-                    if (lang === 'python') return highlight(code, languages.python, 'python');
-                    if (lang === 'javascript') return highlight(code, languages.javascript, 'javascript');
+                    if (currentLanguage === 'python') return highlight(code, languages.python, 'python');
+                    if (currentLanguage === 'javascript') return highlight(code, languages.javascript, 'javascript');
                     return highlight(code, languages.clike, 'java');
                   }}
                   padding={16}
@@ -252,8 +283,8 @@ def handler(event):
                   textareaClassName="focus:outline-none"
                 />
                 <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>
-                  {getLanguage(runtime) === 'python' ? 'main.py' : 
-                   getLanguage(runtime) === 'javascript' ? 'index.js' : 'Handler.java'}
+                  {currentLanguage === 'python' ? 'main.py' : 
+                   currentLanguage === 'javascript' ? 'index.js' : 'Handler.java'}
                 </div>
               </div>
               {/* 에러 목록 표시 */}
