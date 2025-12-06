@@ -72,7 +72,7 @@ export function MapAgent({ status, color = '#ef4444', onClick }: MapAgentProps) 
       >
           <div 
               className={`w-10 h-10 rounded-full shadow-lg border-2 border-white flex items-center justify-center text-white ${
-                isCompleted ? 'bg-green-500' : isFailed ? 'bg-red-500' : ''
+                isCompleted ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'animate-pulse'
               }`}
               style={{ backgroundColor: isCompleted || isFailed ? undefined : color }}
           >

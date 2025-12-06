@@ -6,6 +6,7 @@ import { LogViewer } from './LogViewer';
 import { ExecutionResultModal } from './ExecutionResultModal';
 import { useExecutionContext, type ActiveExecution } from '@/contexts/ExecutionContext';
 import { ROUTE_PATH, POI_COORDINATES } from './constants';
+import { getColorFromId } from '@/utils/color';
 
 export function DeliveryAnimation() {
   const { executions, removeExecution } = useExecutionContext();
@@ -71,7 +72,7 @@ export function DeliveryAnimation() {
 
           {/* 2. Agent Overlay Layer */}
           <div className="absolute inset-0 z-10 w-full h-full pointer-events-none">
-            {executions.map((exec, index) => {
+            {executions.map((exec) => {
               return (
                 <div key={exec.id}>
                   <div className="pointer-events-auto">
@@ -79,7 +80,7 @@ export function DeliveryAnimation() {
                     {/* Enable clicks for children */}
                     <MapAgent
                       status={exec.status}
-                      color={['#ef4444', '#3b82f6', '#10b981', '#f59e0b'][index % 4]}
+                      color={getColorFromId(exec.id)}
                       onClick={() => {
                         setSelectedResult(exec);
                         removeExecution(exec.id);
