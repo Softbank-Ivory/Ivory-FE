@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
-import Lottie from 'lottie-react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ExecutionStatus } from '@/types/api';
 import { DeliveryMap } from './DeliveryMap';
+import { Loader2 } from 'lucide-react';
+
+// Lottie를 동적 import로 로드하여 코드 스플리팅
+const Lottie = lazy(() => import('lottie-react').then(module => ({ default: module.default })));
 
 interface DeliveryAnimationProps {
   status: ExecutionStatus | 'idle';
@@ -146,7 +149,11 @@ export function DeliveryAnimation({ status, onComplete }: DeliveryAnimationProps
         className="fixed inset-0 z-50 bg-[#f4f1ea] flex flex-col items-center justify-center"
       >
         <div className="w-full max-w-lg aspect-square relative flex flex-col items-center justify-center">
-          {animationData && <Lottie animationData={animationData} loop={isDelivering} />}
+          {animationData && (
+            <Suspense fallback={<Loader2 className="animate-spin text-gray-400" size={48} />}>
+              <Lottie animationData={animationData} loop={isDelivering} />
+            </Suspense>
+          )}
           
           {isDelivering && (
             <motion.h2 

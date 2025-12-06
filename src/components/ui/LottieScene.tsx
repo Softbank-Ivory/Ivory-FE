@@ -1,6 +1,8 @@
-import Lottie from 'lottie-react';
-import { useState, useEffect, type ElementType } from 'react';
+import { useState, useEffect, lazy, Suspense, type ElementType } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
+
+// Lottie를 동적 import로 로드하여 코드 스플리팅
+const Lottie = lazy(() => import('lottie-react').then(module => ({ default: module.default })));
 
 interface LottieSceneProps {
   src: string;
@@ -68,12 +70,14 @@ export function LottieScene({ src, className, loop = true, autoplay = true, fall
 
   return (
     <div className={className}>
-      <Lottie 
-        animationData={animationData} 
-        loop={loop} 
-        autoplay={autoplay} 
-        className="w-full h-full"
-      />
+      <Suspense fallback={<Loader2 className="animate-spin text-muted-foreground" size={32} />}>
+        <Lottie 
+          animationData={animationData} 
+          loop={loop} 
+          autoplay={autoplay} 
+          className="w-full h-full"
+        />
+      </Suspense>
     </div>
   );
 }

@@ -105,38 +105,18 @@ export function validatePython(code: string): ValidationResult {
   });
 
   // 전체 코드에서 들여쓰기 검사 (간단한 버전)
-  let expectedIndent = 0;
-  lines.forEach((line, index) => {
-    const lineNum = index + 1;
-    const trimmed = line.trim();
-    
-    if (!trimmed || trimmed.startsWith('#')) {
-      return;
-    }
-
-    // 들여쓰기 계산
-    const indent = line.length - line.trimStart().length;
-    
-    // 제어문이 끝나면 다음 줄은 들여쓰기 필요
-    if (index > 0) {
-      const prevLine = lines[index - 1].trim();
-      if (prevLine.endsWith(':')) {
-        expectedIndent += 4; // Python은 보통 4칸
-      }
-    }
-
-    // 들여쓰기가 필요한데 없는 경우 (경고)
-    if (expectedIndent > 0 && indent < expectedIndent && !trimmed.match(/^(else|elif|except|finally):/)) {
-      // 경고만 표시 (에러는 아님)
-    }
-
-    // 제어문이 끝나면 들여쓰기 리셋
-    if (trimmed.endsWith(':') && !trimmed.match(/^(def|class)/)) {
-      // 다음 줄을 위해 유지
-    } else if (indent === 0 && expectedIndent > 0) {
-      expectedIndent = 0;
-    }
-  });
+  // 주석 처리: 현재는 사용하지 않지만 향후 개선을 위해 유지
+  // let expectedIndent = 0;
+  // lines.forEach((line, index) => {
+  //   const trimmed = line.trim();
+  //   
+  //   if (!trimmed || trimmed.startsWith('#')) {
+  //     return;
+  //   }
+  //
+  //   const indent = line.length - line.trimStart().length;
+  //   // 들여쓰기 검사 로직...
+  // });
 
   return {
     isValid: errors.length === 0,
