@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ClipboardList, Terminal, X, Box, Server, CheckCircle, FileText, Truck, AlertCircle } from 'lucide-react';
-import type { LogEntry, ExecutionStatus } from '@/types/api';
+import type { ExecutionStatus } from '@/types/api';
 import type { ActiveExecution } from '@/contexts/ExecutionContext';
 import { getColorFromId } from '@/utils/color';
 
