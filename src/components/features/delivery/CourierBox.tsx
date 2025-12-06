@@ -183,7 +183,7 @@ def handler(event):
   };
 
   return (
-    <div className="relative w-full max-w-3xl perspective-1000">
+    <div className="relative w-full perspective-1000 overflow-hidden ">
       {/* The Box */}
       <motion.div 
         initial={{ rotateX: 5 }}
@@ -193,12 +193,13 @@ def handler(event):
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full texture-tape pointer-events-none z-10 border-x border-white/10" />
         
         {/* Fragile Sticker */}
-        <div className="absolute -top-4 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
+        <div className="absolute -top-0 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
           FRAGILE: CODE INSIDE
         </div>
 
         {/* The Label (Form) */}
         <div className="texture-paper rounded-sm p-8 relative z-20 max-w-3xl mx-auto transform -rotate-1">
+
           {/* Stamp Animation */}
           <AnimatePresence>
             {stampStatus !== 'idle' && (
@@ -207,9 +208,9 @@ def handler(event):
                 animate={{ opacity: 0.8, scale: 1, rotate: stampStatus === 'approved' ? -15 : 15 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: 'spring', damping: 15, stiffness: 300 }}
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-8 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-6`}
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none border-4 ${stampStatus === 'approved' ? 'border-green-700 text-green-700' : 'border-red-700 text-red-700'} rounded-lg p-4`}
               >
-                <div className="text-8xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
+                <div className="text-6xl font-black uppercase tracking-widest opacity-80 whitespace-nowrap" style={{ fontFamily: 'Impact, sans-serif' }}>
                   {stampStatus === 'approved' ? 'APPROVED' : 'REJECTED'}
                 </div>
               </motion.div>
@@ -369,7 +370,7 @@ def handler(event):
           </form>
           
           {/* Decorative Pen */}
-          <div className="absolute -right-24 bottom-12 transform rotate-12 pointer-events-none z-30">
+          <div className="absolute -right-8 bottom-8 transform rotate-12 pointer-events-none z-30">
             <RealisticPen className="w-32 h-auto filter drop-shadow-2xl" />
           </div>
         </div>
