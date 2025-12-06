@@ -24,7 +24,7 @@ export function LogViewer({ logs, isOpen, isVisible, onToggle }: LogViewerProps)
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             onClick={onToggle}
-            className="fixed top-8 right-8 z-[60] bg-white border-2 border-[#8d6e63] text-[#5d4037] px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2 hover:bg-[#efebe9] transition-colors"
+            className="absolute top-8 right-8 z-[60] bg-white border-2 border-[#8d6e63] text-[#5d4037] px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2 hover:bg-[#efebe9] transition-colors"
           >
             <ClipboardList size={20} />
             View Tracking Details
@@ -41,7 +41,7 @@ export function LogViewer({ logs, isOpen, isVisible, onToggle }: LogViewerProps)
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed top-0 right-0 z-[60] h-full w-full max-w-[500px] bg-[rgba(30,30,30,0.8)] backdrop-blur-md border-l border-[#8d6e63]/30 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] flex flex-col"
+            className="absolute top-0 right-0 z-[60] h-full w-full max-w-[500px] bg-[rgba(30,30,30,0.8)] backdrop-blur-md border-l border-[#8d6e63]/30 shadow-[-10px_0_40px_rgba(0,0,0,0.1)] flex flex-col"
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
                 <h3 className="font-bold text-white uppercase tracking-wider flex items-center gap-2">

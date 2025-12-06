@@ -1,96 +1,79 @@
 import { useState } from 'react';
 import { CourierBox } from '@/components/features/delivery/CourierBox';
 import { DeliveryAnimation } from '@/components/features/delivery/DeliveryAnimation';
-import { LogViewer } from '@/components/features/delivery/LogViewer';
-
-import { useDeployFunction } from '@/hooks/useFunctions';
-import { useExecutionStream } from '@/hooks/useExecutionStream';
-import { useToast } from '@/context/ToastContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useExecutionContext } from '@/contexts/ExecutionContext';
+// import { Plus, X } from 'lucide-react';
+// import { motion, AnimatePresence } from 'framer-motion';
 
 export function HomePage() {
-  const { mutateAsync: deployFunction, isPending: isDeploying } = useDeployFunction();
+  const { startExecution } = useExecutionContext();
   const { error: toastError } = useToast();
-  
-  const [executionId, setExecutionId] = useState<string | undefined>(undefined);
-  const [isAnimationVisible, setIsAnimationVisible] = useState(false);
-  const [isLogOpen, setIsLogOpen] = useState(false);
-
-  // Stream execution data
-  const { status: streamStatus, logs } = useExecutionStream(executionId);
+  // const [isCourierOpen, setIsCourierOpen] = useState(false); // Removed for split screen
+  const [isSending, setIsSending] = useState(false);
 
   const handleSend = async (data: { runtime: string; handler: string; code: string; payload: string }) => {
     try {
+      setIsSending(true);
+      
       let parsedPayload = {};
       try {
         parsedPayload = JSON.parse(data.payload);
       } catch (e) {
         toastError('Invalid JSON in payload');
-        throw e; // Re-throw to trigger REJECTED stamp
+        setIsSending(false);
+        throw e;
       }
 
-      setExecutionId(undefined); // Reset previous execution
-      setIsLogOpen(false);
-
-      const response = await deployFunction({
+      await startExecution({
         code: data.code,
         runtime: data.runtime,
         handler: data.handler,
         payload: parsedPayload
       });
-
-      setExecutionId(response.invocationId);
+      
+      setIsSending(false);
+      setIsSending(false);
+      // setIsCourierOpen(false); // No modal to close
+      
     } catch (error) {
       console.error('Deployment failed', error);
       toastError('Failed to send package. Please try again.');
-      throw error; // Re-throw to trigger REJECTED stamp
+      setIsSending(false);
+      throw error;
     }
   };
 
-  const handleDeliveryStart = () => {
-    setIsAnimationVisible(true);
-  };
-
-  const handleAnimationComplete = () => {
-    setIsAnimationVisible(false);
-    setExecutionId(undefined); // Hide logs when returning to courier box
-  };
-
   return (
-    <div className="min-h-screen bg-[#f4f1ea] flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden relative transition-colors duration-300 dark:bg-zinc-900">
-      {/* Background Texture */}
-      <div className="absolute inset-0 opacity-5 pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#8b4513 1px, transparent 1px)', backgroundSize: '20px 20px' }}>
-      </div>
+    <div className="flex h-screen w-full bg-[#f5f5f5] overflow-hidden min-w-[1280px] min-h-[800px]">
       
-      {/* Dynamic Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-300/20 rounded-full blur-3xl animate-blob" />
-        <div className="absolute top-[20%] right-[-10%] w-[30%] h-[30%] bg-red-300/20 rounded-full blur-3xl animate-blob animation-delay-2000" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[35%] h-[35%] bg-yellow-300/20 rounded-full blur-3xl animate-blob animation-delay-4000" />
+      {/* LEFT: Courier Box Panel */}
+      <div className="w-[45%] flex-shrink-0 h-full border-r border-gray-200 bg-white z-10 shadow-xl overflow-y-auto overflow-x-hidden">
+         <div className="p-1 min-h-full flex flex-col">
+          
+            {/* <h1 className="text-2xl font-black text-[#5d4037] mb-6 flex items-center gap-2">
+              <span>📦</span> IVORY COURIER
+            </h1> */}
+            
+            
+            <CourierBox 
+                onSend={handleSend} 
+                onSuccess={() => {}}
+                isSending={isSending} 
+            />
+{/*
+            <div className="mt-auto pt-6 text-xs text-gray-400 text-center">
+              System Ready • v2.0
+            </div>
+            */}
+         </div>
       </div>
 
-
-      
-      <div className="w-full max-w-7xl flex flex-col items-center gap-8 relative z-10">
-        <CourierBox 
-          onSend={handleSend} 
-          onSuccess={handleDeliveryStart}
-          isSending={isDeploying || (isAnimationVisible && streamStatus !== 'COMPLETED' && streamStatus !== 'FAILED')} 
-        />
+      {/* RIGHT: Full Map View */}
+      <div className="flex-1 h-full relative bg-[#e0ded6]">
+        <DeliveryAnimation />
       </div>
 
-      <DeliveryAnimation 
-        status={isAnimationVisible ? (streamStatus || 'REQUEST_RECEIVED') : 'idle'} 
-        statusMessage={streamStatus?.replace('_', ' ')}
-        onComplete={handleAnimationComplete} 
-      />
-
-      <LogViewer 
-        logs={logs} 
-        isOpen={isLogOpen} 
-        isVisible={!!executionId || isDeploying}
-        onToggle={() => setIsLogOpen(!isLogOpen)} 
-      />
     </div>
   );
 }
