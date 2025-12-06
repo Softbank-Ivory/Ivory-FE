@@ -27,6 +27,53 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
   
   // Keep track of cleanup functions for streams
   const streamCleanupsRef = useRef<Record<string, () => void>>({});
+  
+  // Queue for status updates to ensure minimum display time
+  const statusQueueRef = useRef<Record<string, ExecutionStatus[]>>({});
+  const isProcessingStatusRef = useRef<Record<string, boolean>>({});
+
+  // Helper to process the status queue
+  const processStatusQueue = useCallback((invocationId: string) => {
+    // If we're already processing (waiting), do nothing. The timeout will trigger next step.
+    // However, this function is called when expected 'wait' is over, OR when a new item is added and we were idle.
+    
+    // Check if there are items in the queue
+    const queue = statusQueueRef.current[invocationId];
+    if (!queue || queue.length === 0) {
+      isProcessingStatusRef.current[invocationId] = false;
+      return;
+    }
+
+    // Mark as processing
+    isProcessingStatusRef.current[invocationId] = true;
+
+    // Dequeue next status
+    const nextStatus = queue.shift();
+    if (nextStatus) {
+      setExecutions(prev => prev.map(ex => 
+        ex.id === invocationId ? { ...ex, status: nextStatus } : ex
+      ));
+
+      // Wait 2 seconds before processing the next item
+      setTimeout(() => {
+        processStatusQueue(invocationId);
+      }, 2000);
+    }
+  }, []);
+
+  const queueStatusUpdate = useCallback((invocationId: string, status: ExecutionStatus) => {
+    if (!statusQueueRef.current[invocationId]) {
+      statusQueueRef.current[invocationId] = [];
+    }
+
+    // Push to queue
+    statusQueueRef.current[invocationId].push(status);
+
+    // If not currently processing, start processing
+    if (!isProcessingStatusRef.current[invocationId]) {
+      processStatusQueue(invocationId);
+    }
+  }, [processStatusQueue]);
 
   const startExecution = useCallback(async (data: { runtime: string; handler: string; code: string; payload: any }) => {
     try {
@@ -40,6 +87,10 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
 
       const invocationId = response.invocationId;
 
+      // Initialize queue for this ID
+      statusQueueRef.current[invocationId] = [];
+      isProcessingStatusRef.current[invocationId] = false;
+
       // 2. Create Initial State
       setExecutions(prev => [...prev, {
         id: invocationId,
@@ -51,12 +102,10 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
         startTime: Date.now()
       }]);
 
-      // 3. Connect Stream
+      // Connect Stream
       const cleanup = executionStreamService.connect(invocationId, {
         onStatusChange: (status) => {
-          setExecutions(prev => prev.map(ex => 
-            ex.id === invocationId ? { ...ex, status } : ex
-          ));
+          queueStatusUpdate(invocationId, status);
         },
         onLog: (log) => {
           setExecutions(prev => prev.map(ex => 
@@ -67,6 +116,8 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
           setExecutions(prev => prev.map(ex => 
             ex.id === invocationId ? { ...ex, result } : ex
           ));
+          // If result comes before COMPLETED status in queue, it's fine, 
+          // it will be stored in state but maybe not shown until modal opens (which often depends on COMPLETED status).
         },
         onError: (error) => {
           setExecutions(prev => prev.map(ex => 
@@ -86,7 +137,7 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to start execution:', error);
       throw error;
     }
-  }, [deployFunction]);
+  }, [deployFunction, queueStatusUpdate]);
 
   const removeExecution = useCallback((id: string) => {
     // Cleanup stream if active
@@ -94,6 +145,10 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
         streamCleanupsRef.current[id]();
         delete streamCleanupsRef.current[id];
     }
+    // Cleanup queues
+    delete statusQueueRef.current[id];
+    delete isProcessingStatusRef.current[id];
+
     setExecutions(prev => prev.filter(ex => ex.id !== id));
   }, []);
 
