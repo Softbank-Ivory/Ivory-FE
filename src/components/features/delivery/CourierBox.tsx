@@ -50,10 +50,16 @@ def handler(event):
 
   // Runtime에 따른 언어 매핑
   const getLanguage = (runtimeId: string, runtimeLanguage?: string): string => {
+    // runtimeLanguage가 있으면 먼저 정규화
     if (runtimeLanguage) {
-      return runtimeLanguage.toLowerCase();
+      const lang = runtimeLanguage.toLowerCase().trim();
+      // 언어 별칭 정규화 (백엔드에서 "nodejs"로 오는 경우 처리)
+      if (lang === 'js' || lang === 'nodejs' || lang === 'node') return 'javascript';
+      if (lang === 'ts') return 'typescript';
+      return lang;
     }
     
+    // runtimeLanguage가 없으면 runtimeId에서 추출
     const runtimeLower = runtimeId.toLowerCase();
     if (runtimeLower.includes('python')) return 'python';
     if (runtimeLower.includes('node') || runtimeLower.includes('nodejs')) return 'javascript';
@@ -74,7 +80,6 @@ def handler(event):
         case 'python':
           return highlight(code, languages.python, 'python');
         case 'javascript':
-        case 'js':
           return highlight(code, languages.javascript, 'javascript');
         case 'java':
           return highlight(code, languages.clike, 'java');
@@ -83,7 +88,6 @@ def handler(event):
         case 'rust':
           return highlight(code, languages.rust || languages.clike, 'rust');
         case 'typescript':
-        case 'ts':
           return highlight(code, languages.javascript, 'typescript');
         default:
           return highlight(code, languages.clike, 'text');
@@ -286,11 +290,11 @@ def handler(event):
                 />
                 <div className="absolute top-2 right-2 text-xl text-gray-400 font-bold pointer-events-none" style={{ fontFamily: 'var(--font-hand)' }}>
                   {currentLanguage === 'python' ? 'main.py' : 
-                   currentLanguage === 'javascript' || currentLanguage === 'js' ? 'index.js' :
+                   currentLanguage === 'javascript' ? 'index.js' :
                    currentLanguage === 'java' ? 'Handler.java' :
                    currentLanguage === 'go' ? 'main.go' :
                    currentLanguage === 'rust' ? 'main.rs' :
-                   ['typescript', 'ts'].includes(currentLanguage) ? 'index.ts' :
+                   currentLanguage === 'typescript' ? 'index.ts' :
                    'main.txt'}
                 </div>
               </div>
