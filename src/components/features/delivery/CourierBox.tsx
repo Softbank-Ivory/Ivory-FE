@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Package, Send, Code, Settings, FileJson, Cpu, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Send, Code, Settings, FileJson, Cpu, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useRuntimes } from '@/hooks/useFunctions';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RealisticPen } from '@/components/ui/RealisticPen';
@@ -26,10 +26,8 @@ export function CourierBox({ onSend, onSuccess, isSending }: CourierBoxProps) {
   const [code, setCode] = useState(`import time
 
 def handler(event):
-    print("Function started")
-    time.sleep(5)
-    print("Processing data...")
-    time.sleep(5)
+    time.sleep(10)
+    print("Execution code from Ivory Express!")
     return {"statusCode": 200, "body": "Hello from Ivory Express!"}`);
   const [payload, setPayload] = useState('{}');
 
@@ -169,7 +167,7 @@ def handler(event):
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-full texture-tape pointer-events-none z-10 border-x border-white/10" />
         
         {/* Fragile Sticker */}
-        <div className="absolute -top-0 -right-4 bg-red-600 text-white font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-white z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
+        <div className="absolute -top-0 -right-4 bg-[#ffffe3] text-[#5d4037] font-black px-4 py-2 transform rotate-6 shadow-lg border-2 border-[#5d4037] z-30 text-xl tracking-widest" style={{ fontFamily: 'var(--font-hand)' }}>
           FRAGILE: CODE INSIDE
         </div>
 
@@ -196,12 +194,10 @@ def handler(event):
           {/* Label Header */}
           <div className="flex justify-between items-start border-b-2 border-red-600/20 pb-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="bg-red-600 text-white p-2 rounded">
-                <Package size={24} />
-              </div>
+              <img src="/logo/logo.png" alt="Ivory Express" className="h-16 w-auto object-contain" />
               <div>
-                <h2 className="text-2xl font-black text-gray-800 uppercase tracking-tighter leading-none">Ivory Express</h2>
-                <p className="text-xs font-bold text-red-600 tracking-widest uppercase">Overnight Delivery</p>
+                <h2 className="text-4xl font-black text-gray-800 tracking-tighter leading-none">アイボリーねこ運輸</h2>
+                
               </div>
             </div>
             <div className="text-right">
@@ -331,7 +327,7 @@ def handler(event):
               <button 
                 type="submit" 
                 disabled={isSending || stampStatus !== 'idle' || hasErrors || isValidating}
-                className="group relative bg-red-600 text-white px-8 py-4 rounded font-bold text-lg uppercase tracking-wider shadow-lg hover:bg-red-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                className="group relative bg-[#ffffe3] text-[#5d4037] border-2 border-[#5d4037] px-8 py-4 rounded font-bold text-lg uppercase tracking-wider shadow-lg hover:bg-[#fff9c4] hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   {isSending ? 'Packing...' : 

@@ -60,7 +60,7 @@ export function LogViewer({ executions = [], isOpen, isVisible, onToggle }: LogV
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
             onClick={onToggle}
-            className="absolute top-8 right-8 z-[60] bg-white border-2 border-[#8d6e63] text-[#5d4037] px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2 hover:bg-[#efebe9] transition-colors"
+            className="absolute top-8 right-8 z-[60] bg-[#ffffe3] border-2 border-[#5d4037] text-[#5d4037] px-6 py-3 rounded-full shadow-lg font-bold flex items-center gap-2 hover:bg-[#fff9c4] transition-colors"
           >
             <ClipboardList size={20} />
             View Tracking Details

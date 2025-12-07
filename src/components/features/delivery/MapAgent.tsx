@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion, animate, useMotionValue } from 'framer-motion';
 import type { ExecutionStatus } from '@/types/api';
-import { Truck, Check, X } from 'lucide-react';
+import { Cat, Check, X } from 'lucide-react';
 import { ROUTE_PATH, STAGE_PROGRESS, MAP_DIMENSIONS } from './constants';
 
 interface MapAgentProps {
@@ -19,7 +19,7 @@ export function MapAgent({ status, color = '#ef4444', onClick }: MapAgentProps) 
   // Transition duration based on stage
   const getDuration = () => {
     if (status === 'EXECUTING') return 8; // Very slow transit
-    if (status === 'COMPLETED') return 0.5; // Snap to end
+    if (status === 'COMPLETED') return 2; // Snap to end
     return 2; // Normal movement
   };
 
@@ -81,7 +81,7 @@ export function MapAgent({ status, color = '#ef4444', onClick }: MapAgentProps) 
               ) : isFailed ? (
                 <X size={20} strokeWidth={3} />
               ) : (
-                <Truck size={18} style={{ transform: 'scaleX(-1)' }} />
+                <Cat size={20} strokeWidth={2} />
               )}
           </div>
           
