@@ -41,7 +41,7 @@ export function HomePage() {
         throw e;
       }
 
-      setIsLogOpen(true); // Open logs immediately
+
       setIsSending(true);
 
       await startExecution({
