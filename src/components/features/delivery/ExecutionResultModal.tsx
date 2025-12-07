@@ -38,7 +38,7 @@ export function ExecutionResultModal({ execution, onClose }: ExecutionResultModa
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-colors"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-75 transition-colors"
           />
 
           {/* Modal Sheet (Letter Style) */}
@@ -47,9 +47,9 @@ export function ExecutionResultModal({ execution, onClose }: ExecutionResultModa
             animate={{ y: 0, rotate: 0 }}
             exit={{ y: '100%', rotate: 2 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 z-[100] h-full flex flex-col items-center justify-end pointer-events-none"
+            className="absolute bottom-0 left-0 right-0 z-80 max-h-[50%] flex flex-col items-center"
           >
-            <div className="w-full max-w-4xl relative pointer-events-auto mb-8">
+            <div className="w-full max-w-4xl relative">
                 
                 {/* Envelope Effect Container */}
                 <div className="relative bg-[#f4ebe4] rounded-t-lg shadow-[0_-10px_40px_rgba(0,0,0,0.3)] border-t border-white/50 overflow-hidden" 
