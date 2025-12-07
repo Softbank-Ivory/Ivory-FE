@@ -203,6 +203,8 @@ export function validateJavaScript(code: string): ValidationResult {
     /\bexcept\s+/,                
     /\bpass\b/,                   
     /\bwith\s+\w+\s+as\s+/,       
+    /^import\s+\w+$/,             // Python: import time
+    /^from\s+\w+\s+import/,       // Python: from module import
   ];
 
   lines.forEach((line, index) => {
@@ -341,6 +343,17 @@ function extractLanguage(runtime: string): string {
 }
 
 /**
+ * 언어 이름 정규화 (별칭을 표준 이름으로 변환)
+ */
+function normalizeLanguage(language: string): string {
+  const lang = language.toLowerCase().trim();
+  // 언어 별칭 정규화
+  if (lang === 'js' || lang === 'nodejs' || lang === 'node') return 'javascript';
+  if (lang === 'ts') return 'typescript';
+  return lang;
+}
+
+/**
  * Runtime에 따른 코드 검사
  */
 export function validateCode(
@@ -355,7 +368,9 @@ export function validateCode(
     };
   }
 
-  const language = runtimeLanguage?.toLowerCase() || extractLanguage(runtime);
+  // runtimeLanguage가 있으면 정규화, 없으면 runtime에서 추출
+  const rawLanguage = runtimeLanguage?.toLowerCase() || extractLanguage(runtime);
+  const language = normalizeLanguage(rawLanguage);
   const validator = validatorRegistry[language];
   
   if (validator) {
