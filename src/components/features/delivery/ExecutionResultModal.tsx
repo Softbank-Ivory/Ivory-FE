@@ -38,7 +38,7 @@ export function ExecutionResultModal({ execution, onClose }: ExecutionResultModa
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-50 transition-colors"
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-70 transition-colors"
           />
 
           {/* Modal Sheet (Letter Style) */}
