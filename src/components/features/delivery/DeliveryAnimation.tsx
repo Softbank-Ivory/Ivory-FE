@@ -12,7 +12,7 @@ export function DeliveryAnimation() {
   const [selectedResult, setSelectedResult] = useState<ActiveExecution | null>(null);
 
   return (
-    <div className="absolute inset-0 z-0 bg-[#e0ded6] overflow-hidden">
+    <div className={`absolute inset-0 bg-[#e0ded6] overflow-hidden ${selectedResult ? 'z-[100]' : 'z-0'}`}>
       {/* 
         Full Screen Map Container 
         Using w-full h-full to cover the right panel space.
