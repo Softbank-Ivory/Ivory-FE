@@ -24,12 +24,27 @@ export function HomePage() {
     code: string;
     payload: string;
   }) => {
+    // 임시 invocation ID 생성 (실제 ID는 백엔드에서 생성되지만, 추적을 위해 미리 생성)
+    const tempInvocationId = `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
     try {
-      // Rate Limit 체크
-      const rateLimitCheck = checkRateLimit();
+      // Rate Limit 체크 (임시 invocation ID 전달)
+      const rateLimitCheck = checkRateLimit(tempInvocationId);
+      
+      // Rate limit 체크 결과 로깅 (디버깅용)
       if (!rateLimitCheck.allowed) {
+        console.error('[HomePage] Rate limit exceeded:', {
+          invocationId: tempInvocationId,
+          retryAfter: rateLimitCheck.retryAfter,
+          error: rateLimitCheck.error,
+        });
         toastError(rateLimitCheck.error || 'Too many requests. Please wait.');
         throw new Error(rateLimitCheck.error);
+      } else {
+        // 성공 시에도 로깅 (디버깅용)
+        console.log('[HomePage] Rate limit check passed:', {
+          invocationId: tempInvocationId,
+        });
       }
 
       let parsedPayload = {};
@@ -44,12 +59,17 @@ export function HomePage() {
 
       setIsSending(true);
 
-      await startExecution({
+      const invocationId = await startExecution({
         code: data.code,
         runtime: data.runtime,
         handler: data.handler,
         payload: parsedPayload,
       });
+
+      // 실제 invocation ID가 생성된 후, 로깅 (개발 환경)
+      if (import.meta.env.DEV) {
+        console.log(`[Rate Limiter] Invocation created: ${invocationId}`);
+      }
 
       setIsSending(false);
       setIsSending(false);

@@ -15,7 +15,7 @@ export interface ActiveExecution {
 
 interface ExecutionContextType {
   executions: ActiveExecution[];
-  startExecution: (data: { runtime: string; handler: string; code: string; payload: any }) => Promise<void>;
+  startExecution: (data: { runtime: string; handler: string; code: string; payload: any }) => Promise<string>; // invocationId 반환
   removeExecution: (id: string) => void;
 }
 
@@ -133,6 +133,8 @@ export function ExecutionProvider({ children }: { children: React.ReactNode }) {
 
       streamCleanupsRef.current[invocationId] = cleanup;
 
+      // invocationId 반환
+      return invocationId;
     } catch (error) {
       console.error('Failed to start execution:', error);
       throw error;
