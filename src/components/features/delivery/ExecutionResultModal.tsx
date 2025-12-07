@@ -47,7 +47,7 @@ export function ExecutionResultModal({ execution, onClose }: ExecutionResultModa
             animate={{ y: 0, rotate: 0 }}
             exit={{ y: '100%', rotate: 2 }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute bottom-0 left-0 right-0 z-50 max-h-[60%] flex flex-col items-center"
+            className="absolute bottom-0 left-0 right-0 z-80 max-h-[60%] flex flex-col items-center"
           >
             <div className="w-full max-w-4xl relative">
                 
