@@ -142,10 +142,23 @@ if (typeof window !== 'undefined') {
 function isRateLimiterEnabled(): boolean {
   // 환경 변수로 제어 가능
   const envValue = import.meta.env.VITE_ENABLE_RATE_LIMITER;
-  if (envValue !== undefined) {
-    return envValue === 'true' || envValue === '1';
+  
+  // 환경 변수가 명시적으로 설정된 경우
+  if (envValue !== undefined && envValue !== '') {
+    const isEnabled = envValue === 'true' || envValue === '1';
+    // 초기화 시 한 번만 로깅 (중복 방지)
+    if (!(window as any).__rateLimiterInitLogged) {
+      console.log(`[Rate Limiter] Environment variable VITE_ENABLE_RATE_LIMITER=${envValue}, enabled=${isEnabled}`);
+      (window as any).__rateLimiterInitLogged = true;
+    }
+    return isEnabled;
   }
+  
   // 기본값: 항상 활성화
+  if (!(window as any).__rateLimiterInitLogged) {
+    console.log('[Rate Limiter] No environment variable set, defaulting to enabled=true');
+    (window as any).__rateLimiterInitLogged = true;
+  }
   return true;
 }
 
@@ -154,10 +167,13 @@ function isRateLimiterEnabled(): boolean {
  * @param invocationId (선택) invocation ID (로깅 및 추적용)
  */
 export function checkRateLimit(invocationId?: string): { allowed: boolean; retryAfter?: number; error?: string } {
+  const isEnabled = isRateLimiterEnabled();
+  
   // Rate Limiter가 비활성화된 경우 항상 허용
-  if (!isRateLimiterEnabled()) {
-    if (import.meta.env.DEV && invocationId) {
-      console.log(`[Rate Limiter] Disabled - Request allowed for invocationId: ${invocationId}`);
+  if (!isEnabled) {
+    // 프로덕션에서도 로깅 (디버깅용)
+    if (invocationId) {
+      console.log(`[Rate Limiter] ⚠️ DISABLED - Request allowed for invocationId: ${invocationId}`);
     }
     return { allowed: true };
   }
@@ -166,11 +182,18 @@ export function checkRateLimit(invocationId?: string): { allowed: boolean; retry
   const result = invocationRateLimiter.canMakeRequest(identifier, invocationId);
 
   if (!result.allowed) {
+    // Rate limit 초과 시 항상 로깅 (중요한 이벤트)
+    console.warn(`[Rate Limiter] 🚫 BLOCKED - invocationId: ${invocationId}, identifier: ${identifier}, retryAfter: ${result.retryAfter}s`);
     return {
       allowed: false,
       retryAfter: result.retryAfter,
       error: `Rate limit exceeded. Please try again after ${result.retryAfter} seconds.`,
     };
+  }
+
+  // 성공 시 로깅 (개발 환경 또는 첫 요청 시)
+  if (import.meta.env.DEV && invocationId) {
+    console.log(`[Rate Limiter] ✅ ALLOWED - invocationId: ${invocationId}, identifier: ${identifier}`);
   }
 
   return { allowed: true };

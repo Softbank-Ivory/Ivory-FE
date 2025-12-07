@@ -30,9 +30,21 @@ export function HomePage() {
     try {
       // Rate Limit 체크 (임시 invocation ID 전달)
       const rateLimitCheck = checkRateLimit(tempInvocationId);
+      
+      // Rate limit 체크 결과 로깅 (디버깅용)
       if (!rateLimitCheck.allowed) {
+        console.error('[HomePage] Rate limit exceeded:', {
+          invocationId: tempInvocationId,
+          retryAfter: rateLimitCheck.retryAfter,
+          error: rateLimitCheck.error,
+        });
         toastError(rateLimitCheck.error || 'Too many requests. Please wait.');
         throw new Error(rateLimitCheck.error);
+      } else {
+        // 성공 시에도 로깅 (디버깅용)
+        console.log('[HomePage] Rate limit check passed:', {
+          invocationId: tempInvocationId,
+        });
       }
 
       let parsedPayload = {};
