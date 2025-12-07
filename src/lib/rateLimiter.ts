@@ -135,10 +135,33 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Rate Limiter 활성화 여부 확인
+ * 환경 변수로 제어 가능 (VITE_ENABLE_RATE_LIMITER=true/false)
+ * 기본값: true (모든 환경에서 활성화)
+ */
+function isRateLimiterEnabled(): boolean {
+  // 환경 변수로 제어 가능
+  const envValue = import.meta.env.VITE_ENABLE_RATE_LIMITER;
+  if (envValue !== undefined) {
+    return envValue === 'true' || envValue === '1';
+  }
+  // 기본값: 항상 활성화
+  return true;
+}
+
+/**
  * Rate Limit 체크 함수
  * @param invocationId (선택) invocation ID (로깅 및 추적용)
  */
 export function checkRateLimit(invocationId?: string): { allowed: boolean; retryAfter?: number; error?: string } {
+  // Rate Limiter가 비활성화된 경우 항상 허용
+  if (!isRateLimiterEnabled()) {
+    if (import.meta.env.DEV && invocationId) {
+      console.log(`[Rate Limiter] Disabled - Request allowed for invocationId: ${invocationId}`);
+    }
+    return { allowed: true };
+  }
+
   const identifier = getUserIdentifier();
   const result = invocationRateLimiter.canMakeRequest(identifier, invocationId);
 
@@ -202,12 +225,15 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
     status: getRateLimitStatus,
     reset: resetRateLimit,
     clear: () => invocationRateLimiter.clear(),
+    enabled: isRateLimiterEnabled,
   };
 
   console.log('%cRate Limiter 테스트 도구가 활성화되었습니다!', 'color: green; font-weight: bold;');
+  console.log(`Rate Limiter 상태: ${isRateLimiterEnabled() ? '✅ 활성화' : '❌ 비활성화'}`);
   console.log('사용법:');
   console.log('  window.__rateLimiter.check() - Rate limit 체크');
   console.log('  window.__rateLimiter.status() - 현재 상태 확인');
   console.log('  window.__rateLimiter.reset() - Rate limit 초기화');
   console.log('  window.__rateLimiter.clear() - 모든 기록 초기화');
+  console.log('  window.__rateLimiter.enabled() - Rate limiter 활성화 여부 확인');
 }
