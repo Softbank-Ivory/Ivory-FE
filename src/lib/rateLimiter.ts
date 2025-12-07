@@ -5,8 +5,13 @@ interface RateLimitConfig {
   windowMs: number;
 }
 
+interface RequestRecord {
+  timestamp: number;
+  invocationId?: string; // invocation ID 추적 (선택적)
+}
+
 class RateLimiter {
-  private requests: Map<string, number[]> = new Map();
+  private requests: Map<string, RequestRecord[]> = new Map();
   private config: RateLimitConfig;
 
   constructor(config: RateLimitConfig) {
@@ -16,19 +21,25 @@ class RateLimiter {
   /**
    * 요청 가능 여부 확인
    * @param identifier 사용자 식별자 (IP, 사용자 ID 등)
+   * @param invocationId (선택) invocation ID (로깅 및 추적용)
    * @returns 요청 가능 여부
    */
-  canMakeRequest(identifier: string): { allowed: boolean; retryAfter?: number } {
+  canMakeRequest(identifier: string, invocationId?: string): { allowed: boolean; retryAfter?: number } {
     const now = Date.now();
     const userRequests = this.requests.get(identifier) || [];
 
     // 오래된 요청 제거 (윈도우 밖의 요청)
-    const recentRequests = userRequests.filter((time) => now - time < this.config.windowMs);
+    const recentRequests = userRequests.filter((record) => now - record.timestamp < this.config.windowMs);
 
     if (recentRequests.length >= this.config.maxRequests) {
       // 가장 오래된 요청이 윈도우 밖으로 나가는 시간 계산
-      const oldestRequest = Math.min(...recentRequests);
+      const oldestRequest = Math.min(...recentRequests.map(r => r.timestamp));
       const retryAfter = Math.ceil((oldestRequest + this.config.windowMs - now) / 1000);
+
+      // 로깅 (개발 환경)
+      if (import.meta.env.DEV && invocationId) {
+        console.warn(`[Rate Limiter] Request blocked for invocationId: ${invocationId}, identifier: ${identifier}, retryAfter: ${retryAfter}s`);
+      }
 
       return {
         allowed: false,
@@ -36,9 +47,14 @@ class RateLimiter {
       };
     }
 
-    // 요청 시간 추가
-    recentRequests.push(now);
+    // 요청 기록 추가 (invocation ID 포함)
+    recentRequests.push({ timestamp: now, invocationId });
     this.requests.set(identifier, recentRequests);
+
+    // 로깅 (개발 환경)
+    if (import.meta.env.DEV && invocationId) {
+      console.log(`[Rate Limiter] Request allowed for invocationId: ${invocationId}, identifier: ${identifier}, remaining: ${this.config.maxRequests - recentRequests.length}`);
+    }
 
     return { allowed: true };
   }
@@ -63,7 +79,7 @@ class RateLimiter {
   cleanup(): void {
     const now = Date.now();
     for (const [identifier, requests] of this.requests.entries()) {
-      const recentRequests = requests.filter((time) => now - time < this.config.windowMs);
+      const recentRequests = requests.filter((record) => now - record.timestamp < this.config.windowMs);
 
       if (recentRequests.length === 0) {
         this.requests.delete(identifier);
@@ -71,6 +87,19 @@ class RateLimiter {
         this.requests.set(identifier, recentRequests);
       }
     }
+  }
+
+  /**
+   * 특정 invocation ID로 요청 기록 조회 (디버깅용)
+   */
+  getRequestByInvocationId(invocationId: string): { identifier: string; timestamp: number } | null {
+    for (const [identifier, requests] of this.requests.entries()) {
+      const request = requests.find(r => r.invocationId === invocationId);
+      if (request) {
+        return { identifier, timestamp: request.timestamp };
+      }
+    }
+    return null;
   }
 }
 
@@ -107,10 +136,11 @@ if (typeof window !== 'undefined') {
 
 /**
  * Rate Limit 체크 함수
+ * @param invocationId (선택) invocation ID (로깅 및 추적용)
  */
-export function checkRateLimit(): { allowed: boolean; retryAfter?: number; error?: string } {
+export function checkRateLimit(invocationId?: string): { allowed: boolean; retryAfter?: number; error?: string } {
   const identifier = getUserIdentifier();
-  const result = invocationRateLimiter.canMakeRequest(identifier);
+  const result = invocationRateLimiter.canMakeRequest(identifier, invocationId);
 
   if (!result.allowed) {
     return {
@@ -132,12 +162,13 @@ export function getRateLimitStatus(): {
   maxRequests: number;
   windowMs: number;
   remainingRequests: number;
+  recentInvocations: string[];
 } {
   const identifier = getUserIdentifier();
   const now = Date.now();
   const userRequests = (invocationRateLimiter as any).requests.get(identifier) || [];
   const recentRequests = userRequests.filter(
-    (time: number) => now - time < (invocationRateLimiter as any).config.windowMs,
+    (record: RequestRecord) => now - record.timestamp < (invocationRateLimiter as any).config.windowMs,
   );
 
   return {
@@ -149,6 +180,9 @@ export function getRateLimitStatus(): {
       0,
       (invocationRateLimiter as any).config.maxRequests - recentRequests.length,
     ),
+    recentInvocations: recentRequests
+      .map((r: RequestRecord) => r.invocationId)
+      .filter((id: string | undefined): id is string => id !== undefined),
   };
 }
 
